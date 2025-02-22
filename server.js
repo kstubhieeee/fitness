@@ -374,6 +374,16 @@ app.get("/api/trainer/members", authMiddleware, authorize("trainer"), async (req
     }
 });
 
+app.get("/api/trainers", async (req, res) => {
+    try {
+        const trainers = await Trainer.find().select('-password');
+        res.json(trainers);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: 'Server Error' });
+    }
+});
+
 // Protected Member Profile Routes
 app.get("/api/members/profile", authMiddleware, authorize("member"), async (req, res) => {
     try {

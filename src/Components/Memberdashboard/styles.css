@@ -1,0 +1,20 @@
+/* Custom styles for React Calendar */
+.react-calendar {
+    background-color: #2d3748 !important;
+    /* bg-gray-800 */
+    border: none !important;
+    border-radius: 10px;
+    color: white !important;
+}
+
+.react-calendar__tile {
+    background: none !important;
+    color: white !important;
+}
+
+.react-calendar__tile--active {
+    background: #f97316 !important;
+    /* bg-orange-500 */
+    color: white !important;
+    border-radius: 50%;
+}

@@ -1,8 +1,7 @@
 import React, { useState } from "react";
-import "./login.css";
 import { useNavigate } from "react-router-dom";
-import loginBg from "../../assets/front-view-male-boxer-posing.jpg";
 import { useauthstore } from "../../Store/useauthstore.js";
+
 const Login = () => {
     const [formData, setFormData] = useState({
         username: "",
@@ -11,7 +10,6 @@ const Login = () => {
     });
     const [errorMessage, setErrorMessage] = useState("");
     const [loading, setLoading] = useState(false);
-    //const [authuser, setauthUser] = useState(null)
     const navigate = useNavigate();
     const { login } = useauthstore();
 
@@ -23,77 +21,126 @@ const Login = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         setLoading(true);
-        const data = await login(formData)
-
-
+        const data = await login(formData);
 
         setErrorMessage("");
-
 
         if (data) {
             console.log("Login successful:", data);
             localStorage.setItem("token", data.token);
             if (formData.role === "member") {
-                navigate("/memberdashboard"); // Redirect to Member Dashboard
+                navigate("/memberdashboard");
             } else if (formData.role === "trainer") {
-                navigate("/trainerdashboard"); // Redirect to Trainer Dashboard
+                navigate("/trainerdashboard");
             } else if (formData.role === "admin") {
-                navigate("/admindashboard"); // Redirect to Admin Dashboard
+                navigate("/admindashboard");
             }
         } else {
-            setErrorMessage(data.message || "Invalid credentials");
+            setErrorMessage(data?.message || "Invalid credentials");
         }
 
         setLoading(false);
     };
 
     return (
-        <div className="login-container" style={{ backgroundImage: `url(${loginBg})` }}>
-            <form className="login-form" onSubmit={handleSubmit}>
-                <h2 className="login-title">Login</h2>
-                <div className="form-group">
-                    <label htmlFor="username">Username</label>
-                    <input
-                        type="text"
-                        id="username"
-                        name="username"
-                        value={formData.username}
-                        onChange={handleChange}
-                        placeholder="Enter your username"
-                        required
-                    />
+        <div className="min-h-screen bg-gray-900 py-12 px-4 sm:px-6 lg:px-8 bg-cover bg-center"
+             style={{ backgroundImage: "linear-gradient(rgba(0, 0, 0, 0.8), rgba(0, 0, 0, 0.8)), url('/src/assets/front-view-male-boxer-posing.jpg')" }}>
+            <div className="max-w-md mx-auto">
+                <div className="text-center mb-8">
+                    <h2 className="text-4xl font-bold text-white">
+                        Welcome Back
+                    </h2>
+                    <p className="mt-2 text-gray-400">
+                        Login to continue your fitness journey
+                    </p>
                 </div>
-                <div className="form-group">
-                    <label htmlFor="password">Password</label>
-                    <input
-                        type="password"
-                        id="password"
-                        name="password"
-                        value={formData.password}
-                        onChange={handleChange}
-                        placeholder="Enter your password"
-                        required
-                    />
+
+                <div className="bg-gray-800/50 backdrop-blur-lg p-8 rounded-2xl shadow-xl">
+                    <form onSubmit={handleSubmit} className="space-y-6">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-300">
+                                Username
+                            </label>
+                            <input
+                                type="text"
+                                name="username"
+                                value={formData.username}
+                                onChange={handleChange}
+                                className="mt-1 block w-full bg-gray-700/50 border border-gray-600 rounded-lg py-2 px-3 text-white focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                                required
+                            />
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-gray-300">
+                                Password
+                            </label>
+                            <input
+                                type="password"
+                                name="password"
+                                value={formData.password}
+                                onChange={handleChange}
+                                className="mt-1 block w-full bg-gray-700/50 border border-gray-600 rounded-lg py-2 px-3 text-white focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                                required
+                            />
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-gray-300">
+                                Login As
+                            </label>
+                            <select
+                                name="role"
+                                value={formData.role}
+                                onChange={handleChange}
+                                className="mt-1 block w-full bg-gray-700/50 border border-gray-600 rounded-lg py-2 px-3 text-white focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                                required
+                            >
+                                <option value="member">Member</option>
+                                <option value="trainer">Trainer</option>
+                                <option value="admin">Admin</option>
+                            </select>
+                        </div>
+
+                        {errorMessage && (
+                            <div className="text-red-500 text-sm text-center">
+                                {errorMessage}
+                            </div>
+                        )}
+
+                        <button
+                            type="submit"
+                            disabled={loading}
+                            className="w-full bg-gradient-to-r from-orange-500 to-red-600 text-white rounded-lg py-3 px-4 hover:from-orange-600 hover:to-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 transform transition-all duration-300 hover:-translate-y-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            {loading ? (
+                                <span className="flex items-center justify-center">
+                                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                    Logging in...
+                                </span>
+                            ) : (
+                                'Login'
+                            )}
+                        </button>
+
+                        <div className="text-center mt-4">
+                            <p className="text-gray-400">
+                                Don't have an account?{' '}
+                                <button
+                                    type="button"
+                                    onClick={() => navigate('/member-signup')}
+                                    className="text-orange-500 hover:text-orange-400 font-medium"
+                                >
+                                    Sign up
+                                </button>
+                            </p>
+                        </div>
+                    </form>
                 </div>
-                <div className="form-group">
-                    <label htmlFor="role">Role</label>
-                    <select
-                        id="role"
-                        name="role"
-                        value={formData.role}
-                        onChange={handleChange}
-                        required
-                    >
-                        <option value="member">Member</option>
-                        <option value="trainer">Trainer</option>
-                        <option value="admin">Admin</option>
-                    </select>
-                </div>
-                {errorMessage && <p className="error-message">{errorMessage}</p>}
-                <button type="submit" className="login-btn" disabled={loading}>
-                    {loading ? "Logging in..." : "Login"}
-                </button>
-            </form>
+            </div>
         </div>
     );
 };

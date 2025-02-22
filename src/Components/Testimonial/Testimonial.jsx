@@ -49,7 +49,7 @@ const Testimonial = () => {
                         </div>
                     </div>
                     <div className="relative">
-                        <div className="absolute top-4 right-4 w-72 h-80 bg-gradient-to-r from-orange-500 to-red-600 rounded-2xl transform rotate-6"></div>
+                        <div className="absolute top-4 right-4 w-72 h-80 bg-gradient-to-r rounded-2xl transform rotate-6"></div>
                         <motion.img
                             key={selected}
                             initial={{ opacity: 0, scale: 0.8 }}
