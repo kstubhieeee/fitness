@@ -324,7 +324,7 @@ app.post("/api/trainers/signup", upload.single('photo'), async (req, res) => {
         }
 
         const hashedPassword = await bcrypt.hash(password, 12);
-        const photoPath = req.file ? `/public/trainer/photos/${req.file.filename}` : null;
+        const photoPath = req.file ? `/trainer/photos/${req.file.filename}` : null;
 
         const newTrainer = await Trainer.create({
             username,

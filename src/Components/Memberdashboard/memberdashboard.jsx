@@ -207,10 +207,11 @@ const MemberDashboard = () => {
                                 <div key={trainer._id} className="bg-gray-800 rounded-xl p-6 shadow-lg hover:transform hover:scale-105 transition-transform duration-200">
                                     <div className="flex items-start space-x-4">
                                         <img
-                                            src="/public/trainer/photos/1740246827452-increasy.png"
+                                            src={trainer.photo}
                                             alt={trainer.fullName}
                                             className="w-20 h-20 rounded-full object-cover"
                                         />
+
                                         <div className="flex-1">
                                             <h3 className="text-xl font-semibold text-white">{trainer.fullName}</h3>
                                             <p className="text-orange-500">{trainer.specialization}</p>
