@@ -58,38 +58,38 @@ const Front = () => {
                             </div>
                         </div>
 
-                        <div className="flex space-x-4">
+                        <div className="relative">
                             <button onClick={() => setShowDropdown(!showDropdown)} 
-                                className="px-8 py-3 bg-gradient-to-r from-orange-500 to-red-600 text-white rounded-lg font-semibold hover:from-orange-600 hover:to-red-700 transition-all duration-300">
+                                className="px-8 mr-3 py-3 bg-gradient-to-r from-orange-500 to-red-600 text-white rounded-lg font-semibold hover:from-orange-600 hover:to-red-700 transition-all duration-300">
                                 Get Started
                             </button>
                             <button className="px-8 py-3 border-2 border-orange-500 text-white rounded-lg font-semibold hover:bg-orange-500/10 transition-all duration-300">
                                 Learn More
                             </button>
-                        </div>
 
-                        {showDropdown && (
-                            <div className="absolute bg-gray-800 rounded-lg shadow-xl p-2 z-50">
-                                <button onClick={() => navigate("/member-signup")} 
-                                    className="block w-full text-left px-4 py-2 text-white hover:bg-orange-500 rounded transition-colors duration-300">
-                                    Join as Member
-                                </button>
-                                <button onClick={() => navigate("/trainer-signup")}
-                                    className="block w-full text-left px-4 py-2 text-white hover:bg-orange-500 rounded transition-colors duration-300">
-                                    Join as Trainer
-                                </button>
-                                <button onClick={() => navigate("/login")}
-                                    className="block w-full text-left px-4 py-2 text-white hover:bg-orange-500 rounded transition-colors duration-300">
-                                    Login
-                                </button>
-                            </div>
-                        )}
+                            {showDropdown && (
+                                <div className="relative bg-gray-800 rounded-lg shadow-xl p-2 z-50 mt-2">
+                                    <button onClick={() => navigate("/member-signup")} 
+                                        className="block w-full text-left px-4 py-2 text-white hover:bg-orange-500 rounded transition-colors duration-300">
+                                        Join as Member
+                                    </button>
+                                    <button onClick={() => navigate("/trainer-signup")}
+                                        className="block w-full text-left px-4 py-2 text-white hover:bg-orange-500 rounded transition-colors duration-300">
+                                        Join as Trainer
+                                    </button>
+                                    <button onClick={() => navigate("/login")}
+                                        className="block w-full text-left px-4 py-2 text-white hover:bg-orange-500 rounded transition-colors duration-300">
+                                        Login
+                                    </button>
+                                </div>
+                            )}
+                        </div>
                     </div>
 
                     <div className="relative">
                         <motion.div
                             initial={{ right: "-1rem" }}
-                            whileInView={{ right: "4rem" }}
+                            whileInView={{ right: "2rem" }}
                             transition={transition}
                             className="absolute right-4 top-4 bg-gray-800 rounded-lg p-4 shadow-xl z-10"
                         >
@@ -100,7 +100,7 @@ const Front = () => {
 
                         <motion.img
                             initial={{ right: "11rem" }}
-                            whileInView={{ right: "8rem" }}
+                            whileInView={{ right: "1rem" }}
                             transition={transition}
                             src={hero_image}
                             alt="hero"

@@ -1,7 +1,0 @@
-.Apps {
-    background-color: rgb(125, 121, 121);
-    display: flex;
-    flex-direction: column;
-    gap: 6rem;
-    overflow: hidden;
-}

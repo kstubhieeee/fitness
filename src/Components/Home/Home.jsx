@@ -11,7 +11,10 @@ const Home = () => {
     return (
         <div className="min-h-screen bg-gray-900">
             <Front />
-            <Programs />
+            <div className="mt-5">
+<Programs />
+            </div>
+            
             <Reasons />
             <Plans />
             <Testimonial />
