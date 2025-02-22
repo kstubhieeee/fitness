@@ -4,6 +4,9 @@ const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const dotenv = require("dotenv");
+const multer = require("multer");
+const path = require("path");
+const fs = require("fs");
 
 dotenv.config();
 
@@ -12,11 +15,28 @@ const app = express();
 // Middleware
 app.use(cors());
 app.use(express.json());
+app.use('/public', express.static('public'));
+
+// Configure multer for file uploads
+const storage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        const dir = './public/trainer/photos';
+        if (!fs.existsSync(dir)) {
+            fs.mkdirSync(dir, { recursive: true });
+        }
+        cb(null, dir);
+    },
+    filename: function (req, file, cb) {
+        cb(null, Date.now() + '-' + file.originalname);
+    }
+});
+
+const upload = multer({ storage: storage });
 
 // MongoDB Connection
 const connectDB = async () => {
     try {
-        const conn = await mongoose.connect(process.env.MONGO_URI || "mongodb://localhost:27017");
+        const conn = await mongoose.connect(process.env.MONGO_URI || "mongodb://localhost:27017/fitclub");
         console.log(`MongoDB Connected: ${conn.connection.host}`);
     } catch (error) {
         console.error(`Error: ${error.message}`);
@@ -39,24 +59,49 @@ const memberSchema = new mongoose.Schema({
     username: { type: String, required: true, unique: true },
     email: { type: String, required: true, unique: true },
     password: { type: String, required: true },
-    profilePic: { type: String },
+    phone: { type: String, required: true },
+    age: { type: Number, required: true },
+    gender: { type: String, required: true },
+    emergencyContact: { type: String, required: true },
+    healthConditions: { type: String },
+    userType: { type: String, default: "member" },
     membership: {
-        remainingTime: { type: String },
-        renewalDate: { type: String }
+        type: { type: String },
+        startDate: { type: Date },
+        endDate: { type: Date },
+        status: { type: String, default: "active" }
     },
-    trainer: {
-        name: { type: String },
-        specialization: { type: String },
-        experience: { type: String },
-        email: { type: String },
-        phone: { type: String },
-        image: { type: String }
-    }
+    assignedTrainer: { type: mongoose.Schema.Types.ObjectId, ref: 'Trainer' }
+});
+
+const trainerSchema = new mongoose.Schema({
+    username: { type: String, required: true, unique: true },
+    email: { type: String, required: true, unique: true },
+    password: { type: String, required: true },
+    fullName: { type: String, required: true },
+    age: { type: Number, required: true },
+    gender: { type: String, required: true },
+    phone: { type: String, required: true },
+    specialization: { type: String, required: true },
+    experience: { type: Number, required: true },
+    certification: { type: String, required: true },
+    feePerMonth: { type: Number, required: true },
+    availability: { type: String, required: true },
+    photo: { type: String, required: true },
+    userType: { type: String, default: "trainer" },
+    clients: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Member' }],
+    rating: { type: Number, default: 0 },
+    reviews: [{
+        memberId: { type: mongoose.Schema.Types.ObjectId, ref: 'Member' },
+        rating: Number,
+        comment: String,
+        date: { type: Date, default: Date.now }
+    }]
 });
 
 const Member = mongoose.model("Member", memberSchema);
+const Trainer = mongoose.model("Trainer", trainerSchema);
 
-// Add this schema after other schemas
 const eventSchema = new mongoose.Schema({
     userId: { type: mongoose.Schema.Types.ObjectId, required: true },
     title: { type: String, required: true },
@@ -127,10 +172,16 @@ app.post("/api/users/signup", async (req, res) => {
 });
 
 app.post("/api/users/login", async (req, res) => {
-    const { username, password } = req.body;
+    const { username, password, role } = req.body;
 
     try {
-        const user = await User.findOne({ username });
+        let user;
+        if (role === "member") {
+            user = await Member.findOne({ username });
+        } else if (role === "trainer") {
+            user = await Trainer.findOne({ username });
+        }
+
         if (!user) {
             return res.status(400).json({ message: "Invalid credentials" });
         }
@@ -204,7 +255,115 @@ app.post("/api/members/register", authMiddleware, authorize("member"), async (re
     }
 });
 
+// Member Routes
+app.post("/api/members/signup", async (req, res) => {
+    try {
+        const { username, email, password, phone, age, gender, emergencyContact, healthConditions } = req.body;
+
+        const existingMember = await Member.findOne({ $or: [{ email }, { username }] });
+        if (existingMember) {
+            return res.status(400).json({ message: "User already exists" });
+        }
+
+        const hashedPassword = await bcrypt.hash(password, 12);
+
+        const newMember = await Member.create({
+            username,
+            email,
+            password: hashedPassword,
+            phone,
+            age,
+            gender,
+            emergencyContact,
+            healthConditions,
+            userType: "member"
+        });
+
+        const token = jwt.sign(
+            { id: newMember._id, userType: "member" },
+            process.env.JWT_SECRET || "myjwtsecretkey1616",
+            { expiresIn: "1h" }
+        );
+
+        res.status(201).json({ 
+            user: {
+                _id: newMember._id,
+                username: newMember.username,
+                email: newMember.email,
+                userType: "member"
+            }, 
+            token 
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: "Something went wrong" });
+    }
+});
+
 // Protected Trainer Routes
+app.post("/api/trainers/signup", upload.single('photo'), async (req, res) => {
+    try {
+        const {
+            username,
+            email,
+            password,
+            fullName,
+            age,
+            gender,
+            phone,
+            specialization,
+            experience,
+            certification,
+            feePerMonth,
+            availability
+        } = req.body;
+
+        const existingTrainer = await Trainer.findOne({ $or: [{ email }, { username }] });
+        if (existingTrainer) {
+            return res.status(400).json({ message: "Trainer already exists" });
+        }
+
+        const hashedPassword = await bcrypt.hash(password, 12);
+        const photoPath = req.file ? `/public/trainer/photos/${req.file.filename}` : null;
+
+        const newTrainer = await Trainer.create({
+            username,
+            email,
+            password: hashedPassword,
+            fullName,
+            age,
+            gender,
+            phone,
+            specialization,
+            experience,
+            certification,
+            feePerMonth,
+            availability,
+            photo: photoPath,
+            userType: "trainer"
+        });
+
+        const token = jwt.sign(
+            { id: newTrainer._id, userType: "trainer" },
+            process.env.JWT_SECRET || "myjwtsecretkey1616",
+            { expiresIn: "1h" }
+        );
+
+        res.status(201).json({ 
+            user: {
+                _id: newTrainer._id,
+                username: newTrainer.username,
+                email: newTrainer.email,
+                userType: "trainer"
+            }, 
+            token 
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: "Something went wrong" });
+    }
+});
+
 app.get("/api/trainer/members", authMiddleware, authorize("trainer"), async (req, res) => {
     try {
         const members = await Member.find().select('-password');
@@ -218,7 +377,10 @@ app.get("/api/trainer/members", authMiddleware, authorize("trainer"), async (req
 // Protected Member Profile Routes
 app.get("/api/members/profile", authMiddleware, authorize("member"), async (req, res) => {
     try {
-        const member = await Member.findById(req.user.id).select('-password');
+        const member = await Member.findById(req.user.id)
+            .select('-password')
+            .populate('assignedTrainer', 'fullName specialization experience');
+        
         if (!member) {
             return res.status(404).json({ message: 'Member not found' });
         }
@@ -243,6 +405,22 @@ app.put("/api/members/profile", authMiddleware, authorize("member"), async (req,
         ).select('-password');
 
         res.json(updatedMember);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: 'Server Error' });
+    }
+});
+
+app.get("/api/trainers/profile", authMiddleware, async (req, res) => {
+    try {
+        const trainer = await Trainer.findById(req.user.id)
+            .select('-password')
+            .populate('clients', 'username email');
+        
+        if (!trainer) {
+            return res.status(404).json({ message: 'Trainer not found' });
+        }
+        res.json(trainer);
     } catch (err) {
         console.error(err);
         res.status(500).json({ message: 'Server Error' });

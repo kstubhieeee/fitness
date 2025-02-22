@@ -5,70 +5,38 @@
     align-items: center;
     justify-content: center;
     min-height: 100vh;
-    background-color: #000;
-    /* Black background */
-    font-family: 'Arial', sans-serif;
+    background: linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)),
+        url('../../assets/front-view-male-boxer-posing.jpg');
+    background-size: cover;
+    background-position: center;
     padding: 20px;
-}
-
-.user-type-buttons {
-    display: flex;
-    justify-content: center;
-    margin-bottom: 20px;
-}
-
-.user-type-buttons button {
-    padding: 10px 20px;
-    margin: 0 10px;
-    border: none;
-    border-radius: 5px;
-    background-color: rgba(255, 255, 255, 0.1);
-    /* Semi-transparent white */
-    color: #fff;
-    font-size: 16px;
-    cursor: pointer;
-    transition: background-color 0.3s ease, color 0.3s ease;
-}
-
-.user-type-buttons button.active {
-    background-color: #007bff;
-    /* Blue for active button */
     color: #fff;
 }
 
-.user-type-buttons button:hover {
-    background-color: rgba(255, 255, 255, 0.2);
-    /* Lighter on hover */
-}
-
-/* Form container */
 .signup-form-container {
-    background-color: rgba(255, 255, 255, 0.1);
-    /* Semi-transparent white */
-    padding: 30px;
-    border-radius: 10px;
-    box-shadow: 0 0 20px rgba(0, 123, 255, 0.5);
-    /* Subtle blue glow */
+    background: rgba(25, 25, 25, 0.9);
+    padding: 40px;
+    border-radius: 15px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
     width: 100%;
-    max-width: 400px;
-    backdrop-filter: blur(10px);
-    /* Blur effect for transparency */
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    /* Subtle border */
+    max-width: 600px;
+    margin: 20px;
 }
 
 .signup-title {
     text-align: center;
-    margin-bottom: 20px;
-    font-size: 24px;
+    font-size: 2rem;
+    margin-bottom: 30px;
     color: #fff;
-    /* White text */
+    text-transform: uppercase;
+    letter-spacing: 2px;
 }
 
 /* Form styles */
 .signup-form {
-    display: flex;
-    flex-direction: column;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
 }
 
 .form-group {
@@ -77,123 +45,110 @@
 
 .form-group label {
     display: block;
-    margin-bottom: 5px;
-    font-size: 14px;
+    margin-bottom: 8px;
+    font-size: 0.9rem;
     color: #fff;
-    /* White text */
+    font-weight: 500;
 }
 
-.form-group input {
+.form-group input,
+.form-group select,
+.form-group textarea {
     width: 100%;
-    padding: 10px;
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    /* Semi-transparent border */
-    border-radius: 5px;
-    font-size: 14px;
-    background-color: rgba(255, 255, 255, 0.1);
-    /* Semi-transparent background */
+    padding: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.1);
     color: #fff;
-    /* White text */
-    transition: border-color 0.3s ease;
+    font-size: 1rem;
+    transition: all 0.3s ease;
 }
 
-.form-group input::placeholder {
-    color: rgba(255, 255, 255, 0.5);
-    /* Light placeholder text */
-}
-
-.form-group input:focus {
-    border-color: #007bff;
-    /* Blue border on focus */
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
     outline: none;
+    border-color: #007bff;
+    background: rgba(255, 255, 255, 0.15);
 }
 
-/* Submit button */
-.signup-btn {
+.form-group input::placeholder,
+.form-group textarea::placeholder {
+    color: rgba(255, 255, 255, 0.5);
+}
+
+/* File input styling */
+.form-group input[type="file"] {
     padding: 10px;
-    background-color: #007bff;
-    /* Blue button */
+    background: rgba(255, 255, 255, 0.1);
+    cursor: pointer;
+}
+
+.photo-preview {
+    margin-top: 10px;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.photo-preview img {
+    width: 100%;
+    height: auto;
+    border-radius: 8px;
+}
+
+/* Button styles */
+.signup-btn {
+    width: 100%;
+    padding: 15px;
+    background: #007bff;
     color: #fff;
     border: none;
-    border-radius: 5px;
-    font-size: 16px;
+    border-radius: 8px;
+    font-size: 1.1rem;
+    font-weight: 600;
     cursor: pointer;
-    transition: background-color 0.3s ease;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-top: 20px;
 }
 
 .signup-btn:hover {
-    background-color: #ff0000;
-    /* Darker blue on hover */
+    background: #0056b3;
+    transform: translateY(-2px);
 }
 
-/* Optional phone number field */
-.form-group input[type="tel"] {
-    background-color: rgba(255, 255, 255, 0.1);
-    /* Semi-transparent background */
+.signup-btn:active {
+    transform: translateY(0);
 }
 
-/* Error message */
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .signup-form {
+        grid-template-columns: 1fr;
+    }
+
+    .signup-form-container {
+        padding: 20px;
+    }
+}
+
+/* Trainer specific styles */
+.trainer-signup .form-group textarea {
+    min-height: 100px;
+    resize: vertical;
+}
+
+/* Error message styling */
 .error-message {
     color: #ff4d4d;
-    /* Red error text */
-    font-size: 12px;
+    font-size: 0.9rem;
     margin-top: 5px;
-    display: none;
 }
 
-.error-message.show {
-    display: block;
-}
-
-/* Success Popup Styles */
-.success-popup {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.5);
-    /* Semi-transparent background */
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 1000;
-    /* Ensure it's on top */
-}
-
-.success-popup-content {
-    background-color: #2a2a2a;
-    /* Dark background */
-    padding: 20px;
-    border-radius: 10px;
-    text-align: center;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
-}
-
-.success-popup-content h2 {
-    color: #007bff;
-    /* Blue accent */
-    margin-bottom: 10px;
-}
-
-.success-popup-content p {
-    color: #fff;
-    margin-bottom: 20px;
-}
-
-.success-popup-content button {
-    padding: 10px 20px;
-    background-color: #007bff;
-    /* Blue button */
-    color: #fff;
-    border: none;
-    border-radius: 5px;
-    font-size: 1rem;
-    cursor: pointer;
-    transition: background-color 0.3s ease;
-}
-
-.success-popup-content button:hover {
-    background-color: #0056b3;
-    /* Darker blue on hover */
+/* Success message styling */
+.success-message {
+    color: #28a745;
+    font-size: 0.9rem;
+    margin-top: 5px;
 }

@@ -21,19 +21,19 @@ const Front = () => {
     navigate("/login");
   };
 
-  const navigateToSignup = () => {
-    navigate("/signup");
+  const navigateToMemberSignup = () => {
+    navigate("/member-signup");
   };
 
+  const navigateToTrainerSignup = () => {
+    navigate("/trainer-signup");
+  };
 
   const handleGetStarted = () => {
-    // Scroll to the "Join Now" section
     const joinSection = document.getElementById("join-now-section");
     if (joinSection) {
       joinSection.scrollIntoView({ behavior: "smooth" });
     }
-
-    // Open the dropdown
     setShowDropdown(true);
   };
 
@@ -90,7 +90,8 @@ const Front = () => {
           </button>
           {showDropdown && (
             <div className="dropdown-menu">
-              <button className="dropdown-item" onClick={navigateToSignup}>Sign Up</button>
+              <button className="dropdown-item" onClick={navigateToMemberSignup}>Join as Member</button>
+              <button className="dropdown-item" onClick={navigateToTrainerSignup}>Join as Trainer</button>
               <button className="dropdown-item" onClick={navigateToLogin}>Login</button>
             </div>
           )}
