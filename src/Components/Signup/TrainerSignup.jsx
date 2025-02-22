@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import "./signup.css";
+import "./TrainerSignup.css";
 
 const TrainerSignup = () => {
     const [formData, setFormData] = useState({
@@ -70,10 +70,10 @@ const TrainerSignup = () => {
     };
 
     return (
-        <div className="signup-container">
-            <div className="signup-form-container trainer-signup">
-                <h2 className="signup-title">Trainer Registration</h2>
-                <form className="signup-form" onSubmit={handleSubmit}>
+        <div className="trainer-signup-container">
+            <div className="trainer-signup-form-container">
+                <h2 className="trainer-signup-title">Trainer Registration</h2>
+                <form className="trainer-signup-form" onSubmit={handleSubmit}>
                     <div className="form-group">
                         <label htmlFor="fullName">Full Name</label>
                         <input
@@ -244,11 +244,11 @@ const TrainerSignup = () => {
                         />
                         {photoPreview && (
                             <div className="photo-preview">
-                                <img src={photoPreview} alt="Preview" style={{ maxWidth: '200px' }} />
+                                <img src={photoPreview} alt="Preview" />
                             </div>
                         )}
                     </div>
-                    <button type="submit" className="signup-btn">
+                    <button type="submit" className="trainer-signup-btn">
                         Register as Trainer
                     </button>
                 </form>

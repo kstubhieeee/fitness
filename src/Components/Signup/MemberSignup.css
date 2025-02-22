@@ -1,0 +1,43 @@
+.member-signup-container {
+  @apply min-h-screen flex flex-col items-center justify-center bg-cover bg-center p-5;
+  background-image: linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)),
+    url('../../assets/front-view-male-boxer-posing.jpg');
+}
+
+.member-signup-form-container {
+  @apply bg-black/90 p-10 rounded-2xl shadow-2xl w-full max-w-2xl m-5;
+}
+
+.member-signup-title {
+  @apply text-center text-3xl mb-8 text-white uppercase tracking-wider;
+}
+
+.member-signup-form {
+  @apply grid grid-cols-1 md:grid-cols-2 gap-5;
+}
+
+.member-signup-form .form-group {
+  @apply mb-4;
+}
+
+.member-signup-form label {
+  @apply block mb-2 text-sm text-white font-medium;
+}
+
+.member-signup-form input,
+.member-signup-form select,
+.member-signup-form textarea {
+  @apply w-full p-3 border border-white/20 rounded-lg bg-white/10 text-white text-base
+         focus:outline-none focus:border-primary focus:bg-white/15 transition-all duration-300;
+}
+
+.member-signup-form input::placeholder,
+.member-signup-form textarea::placeholder {
+  @apply text-white/50;
+}
+
+.member-signup-btn {
+  @apply col-span-1 md:col-span-2 w-full py-4 bg-primary text-white rounded-lg text-lg font-semibold
+         uppercase tracking-wide mt-5 transition-all duration-300 hover:bg-red-700 
+         transform hover:-translate-y-1 active:translate-y-0;
+}

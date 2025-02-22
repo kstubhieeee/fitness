@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import './front.css';
 import Header from '../Header/Header';
 import hero_image from '../../assets/hero_image.png';
 import hero_image_back from '../../assets/hero_image_back.png';
@@ -9,123 +8,131 @@ import { motion } from 'framer-motion';
 import { useNavigate } from "react-router-dom";
 
 const Front = () => {
-  const [showDropdown, setShowDropdown] = useState(false);
-  const transition = { type: 'spring', duration: 3 };
-  const navigate = useNavigate();
+    const [showDropdown, setShowDropdown] = useState(false);
+    const navigate = useNavigate();
+    const transition = { type: 'spring', duration: 3 };
 
-  const toggleDropdown = () => {
-    setShowDropdown(!showDropdown);
-  };
+    return (
+        <div className="min-h-screen bg-gray-900 relative overflow-hidden" id="home">
+            <div className="max-w-7xl mx-auto px-4 py-8">
+                <Header />
+                
+                <div className="grid md:grid-cols-2 gap-12 items-center mt-16">
+                    <div className="space-y-8">
+                        <motion.div
+                            initial={{ x: -100, opacity: 0 }}
+                            whileInView={{ x: 0, opacity: 1 }}
+                            transition={transition}
+                            className="inline-block bg-gradient-to-r from-orange-500 to-red-600 rounded-full px-6 py-2"
+                        >
+                            <span className="text-white font-medium">
+                                Power-Fit Change yourself into new YOU
+                            </span>
+                        </motion.div>
 
-  const navigateToLogin = () => {
-    navigate("/login");
-  };
+                        <div className="space-y-4">
+                            <h1 className="text-5xl md:text-7xl font-bold">
+                                <span className="text-white">Transform Your</span>
+                                <br />
+                                <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-500 to-red-600">
+                                    Ideal Body
+                                </span>
+                            </h1>
+                            <p className="text-gray-300 text-lg leading-relaxed max-w-xl">
+                                In here we will help you to shape and build your ideal body and live up your life to fullest
+                            </p>
+                        </div>
 
-  const navigateToMemberSignup = () => {
-    navigate("/member-signup");
-  };
+                        <div className="grid grid-cols-3 gap-8">
+                            <div className="text-center">
+                                <h3 className="text-3xl font-bold text-white">+100</h3>
+                                <p className="text-orange-500">Expert Coaches</p>
+                            </div>
+                            <div className="text-center">
+                                <h3 className="text-3xl font-bold text-white">+1000</h3>
+                                <p className="text-orange-500">Members Joined</p>
+                            </div>
+                            <div className="text-center">
+                                <h3 className="text-3xl font-bold text-white">+50</h3>
+                                <p className="text-orange-500">Fitness Programs</p>
+                            </div>
+                        </div>
 
-  const navigateToTrainerSignup = () => {
-    navigate("/trainer-signup");
-  };
+                        <div className="flex space-x-4">
+                            <button onClick={() => setShowDropdown(!showDropdown)} 
+                                className="px-8 py-3 bg-gradient-to-r from-orange-500 to-red-600 text-white rounded-lg font-semibold hover:from-orange-600 hover:to-red-700 transition-all duration-300">
+                                Get Started
+                            </button>
+                            <button className="px-8 py-3 border-2 border-orange-500 text-white rounded-lg font-semibold hover:bg-orange-500/10 transition-all duration-300">
+                                Learn More
+                            </button>
+                        </div>
 
-  const handleGetStarted = () => {
-    const joinSection = document.getElementById("join-now-section");
-    if (joinSection) {
-      joinSection.scrollIntoView({ behavior: "smooth" });
-    }
-    setShowDropdown(true);
-  };
+                        {showDropdown && (
+                            <div className="absolute bg-gray-800 rounded-lg shadow-xl p-2 z-50">
+                                <button onClick={() => navigate("/member-signup")} 
+                                    className="block w-full text-left px-4 py-2 text-white hover:bg-orange-500 rounded transition-colors duration-300">
+                                    Join as Member
+                                </button>
+                                <button onClick={() => navigate("/trainer-signup")}
+                                    className="block w-full text-left px-4 py-2 text-white hover:bg-orange-500 rounded transition-colors duration-300">
+                                    Join as Trainer
+                                </button>
+                                <button onClick={() => navigate("/login")}
+                                    className="block w-full text-left px-4 py-2 text-white hover:bg-orange-500 rounded transition-colors duration-300">
+                                    Login
+                                </button>
+                            </div>
+                        )}
+                    </div>
 
-  return (
-    <div className="front" id="home">
-      <div className="left-s">
-        <Header />
-        <div className="the-best-ad">
-          <motion.div
-            initial={{ left: '238px' }}
-            whileInView={{ left: '8px' }}
-            transition={{ ...transition, type: 'tween' }}
-          ></motion.div>
-          <span>Power-Fit Change yourself into new YOU</span>
-        </div>
-        <div className="hero-text">
-          <div>
-            <span className="stroke-text">Transform </span>
-            <span>Your</span>
-          </div>
-          <div>
-            <span>Ideal Body </span>
-          </div>
-          <div>
-            <span>
-              In here we will help you to shape and build your ideal body and live up your life to
-              fullest
-            </span>
-          </div>
-        </div>
-        <div className="figures">
-          <div>
-            <span>+100</span>
-            <span>Certified Trainers</span>
-          </div>
-          <div>
-            <span>1000+</span>
-            <span>Members Joined</span>
-          </div>
-          <div>
-            <span>50+</span>
-            <span>Fitness Programs</span>
-          </div>
-        </div>
-        <div className="front-buttons">
-          <button className="btn" onClick={handleGetStarted}>Get Started</button>
-          <button className="btn">Learn More</button>
-        </div>
-      </div>
-      <div className="right-s">
-        <div className="dropdown-container" id="join-now-section">
-          <button className="btn" onClick={toggleDropdown}>
-            Join Now
-          </button>
-          {showDropdown && (
-            <div className="dropdown-menu">
-              <button className="dropdown-item" onClick={navigateToMemberSignup}>Join as Member</button>
-              <button className="dropdown-item" onClick={navigateToTrainerSignup}>Join as Trainer</button>
-              <button className="dropdown-item" onClick={navigateToLogin}>Login</button>
+                    <div className="relative">
+                        <motion.div
+                            initial={{ right: "-1rem" }}
+                            whileInView={{ right: "4rem" }}
+                            transition={transition}
+                            className="absolute right-4 top-4 bg-gray-800 rounded-lg p-4 shadow-xl z-10"
+                        >
+                            <img src={heart} alt="heart" className="w-8 h-8 mb-2" />
+                            <span className="text-gray-400">Heart Rate</span>
+                            <h3 className="text-2xl font-bold text-white">121 BPM</h3>
+                        </motion.div>
+
+                        <motion.img
+                            initial={{ right: "11rem" }}
+                            whileInView={{ right: "8rem" }}
+                            transition={transition}
+                            src={hero_image}
+                            alt="hero"
+                            className="relative z-20 max-w-md mx-auto"
+                        />
+
+                        <motion.img
+                            initial={{ right: "20rem" }}
+                            whileInView={{ right: "15rem" }}
+                            transition={transition}
+                            src={hero_image_back}
+                            alt="hero background"
+                            className="absolute top-0 right-0 -z-10 opacity-50"
+                        />
+
+                        <motion.div
+                            initial={{ right: "37rem" }}
+                            whileInView={{ right: "28rem" }}
+                            transition={transition}
+                            className="absolute bottom-4 right-4 bg-gray-800 rounded-lg p-4 shadow-xl z-10 flex items-center space-x-4"
+                        >
+                            <img src={calories} alt="calories" className="w-12 h-12" />
+                            <div>
+                                <span className="text-gray-400">Calories Burned</span>
+                                <h3 className="text-2xl font-bold text-white">220 kcal</h3>
+                            </div>
+                        </motion.div>
+                    </div>
+                </div>
             </div>
-          )}
         </div>
-
-        <motion.div
-          initial={{ right: '-1rem' }}
-          whileInView={{ right: '4rem' }}
-          transition={transition}
-          className="heart-rate"
-        >
-          <img src={heart} alt="" />
-          <span>heart rate</span>
-          <span>121 bpm</span>
-        </motion.div>
-
-        <img src={hero_image} alt="" className="hero-image" />
-        <img src={hero_image_back} alt="" className="hero-image-back" />
-
-        <motion.div
-          initial={{ right: '37rem' }}
-          whileInView={{ right: '28rem' }}
-          transition={transition}
-          className="calories"
-        >
-          <img src={calories} alt="" />
-          <div>
-            <span>Calories Burned</span>
-            <span>220 kcal</span>
-          </div>
-        </motion.div>
-      </div>
-    </div>
-  );
+    );
 };
 
 export default Front;

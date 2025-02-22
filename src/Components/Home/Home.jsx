@@ -6,24 +6,18 @@ import Plans from '../Plans/Plans';
 import Testimonial from '../Testimonial/Testimonial';
 import Join from '../Join/Join';
 import Footer from '../Footer/Footer';
-import './Home.css';
-
 
 const Home = () => {
     return (
-        <div className="Apps">
-            <>
-
-                <Front />
-                <Programs />
-                <Reasons />
-                <Plans />
-                <Testimonial />
-                <Join />
-                <Footer />
-            </>
+        <div className="min-h-screen bg-gray-900">
+            <Front />
+            <Programs />
+            <Reasons />
+            <Plans />
+            <Testimonial />
+            <Join />
+            <Footer />
         </div>
-
     );
 };
 
