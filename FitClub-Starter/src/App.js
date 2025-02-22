@@ -6,6 +6,7 @@ import Trainerdashboard from './Components/Trainerdashboard/trainerdashboard';
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import Signup from './Components/Signup/signup';
 import Planspage from './Components/Planspage/planspage';
+import mongoose from 'mongoose';
 
 
 function App() {

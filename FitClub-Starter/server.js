@@ -56,29 +56,50 @@ const memberSchema = new mongoose.Schema({
 
 const Member = mongoose.model("Member", memberSchema);
 
+// Add this schema after other schemas
+const eventSchema = new mongoose.Schema({
+    userId: { type: mongoose.Schema.Types.ObjectId, required: true },
+    title: { type: String, required: true },
+    date: { type: Date, required: true }
+});
+
+const Event = mongoose.model("Event", eventSchema);
+
 // Authentication Middleware
 const authMiddleware = (req, res, next) => {
-    const token = req.header('Authorization')?.split(' ')[1];
-
-    if (!token) {
-        return res.status(401).json({ message: 'No token, authorization denied' });
-    }
-
     try {
+        const token = req.header('Authorization')?.split(' ')[1];
+
+        if (!token) {
+            return res.status(401).json({ message: 'Access denied. No token provided.' });
+        }
+
         const decoded = jwt.verify(token, process.env.JWT_SECRET || "myjwtsecretkey1616");
-        req.memberId = decoded.memberId;
+        req.user = decoded;
         next();
     } catch (err) {
-        res.status(401).json({ message: 'Token is not valid' });
+        res.status(401).json({ message: 'Invalid token' });
     }
 };
 
-// User Routes
+// Role-based Authorization Middleware
+const authorize = (...roles) => {
+    return (req, res, next) => {
+        if (!roles.includes(req.user.userType)) {
+            return res.status(403).json({ 
+                message: 'Access denied. You do not have permission to access this resource.' 
+            });
+        }
+        next();
+    };
+};
+
+// Public Routes
 app.post("/api/users/signup", async (req, res) => {
     const { username, email, password, phone, userType } = req.body;
 
     try {
-        const existingUser = await User.findOne({ email });
+        const existingUser = await User.findOne({ $or: [{ email }, { username }] });
         if (existingUser) {
             return res.status(400).json({ message: "User already exists" });
         }
@@ -93,9 +114,11 @@ app.post("/api/users/signup", async (req, res) => {
             userType,
         });
 
-        const token = jwt.sign({ id: newUser._id }, process.env.JWT_SECRET || "myjwtsecretkey1616", {
-            expiresIn: "1h",
-        });
+        const token = jwt.sign(
+            { id: newUser._id, userType: newUser.userType }, 
+            process.env.JWT_SECRET || "myjwtsecretkey1616",
+            { expiresIn: "1h" }
+        );
 
         res.status(201).json({ user: newUser, token });
     } catch (error) {
@@ -117,9 +140,11 @@ app.post("/api/users/login", async (req, res) => {
             return res.status(400).json({ message: "Invalid credentials" });
         }
 
-        const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET || "myjwtsecretkey1616", {
-            expiresIn: "1h",
-        });
+        const token = jwt.sign(
+            { id: user._id, userType: user.userType },
+            process.env.JWT_SECRET || "myjwtsecretkey1616",
+            { expiresIn: "1h" }
+        );
 
         res.status(200).json({
             _id: user._id,
@@ -133,12 +158,12 @@ app.post("/api/users/login", async (req, res) => {
     }
 });
 
-// Member Routes
-app.post("/api/members/register", async (req, res) => {
+// Protected Member Routes
+app.post("/api/members/register", authMiddleware, authorize("member"), async (req, res) => {
     const { username, email, password, profilePic } = req.body;
 
     try {
-        const existingMember = await Member.findOne({ email });
+        const existingMember = await Member.findOne({ $or: [{ email }, { username }] });
         if (existingMember) {
             return res.status(400).json({ message: 'Member already exists' });
         }
@@ -166,7 +191,11 @@ app.post("/api/members/register", async (req, res) => {
 
         await newMember.save();
 
-        const token = jwt.sign({ memberId: newMember._id }, process.env.JWT_SECRET || "myjwtsecretkey1616", { expiresIn: '1h' });
+        const token = jwt.sign(
+            { memberId: newMember._id, userType: "member" },
+            process.env.JWT_SECRET || "myjwtsecretkey1616",
+            { expiresIn: '1h' }
+        );
 
         res.json({ token, message: 'Registration successful', member: newMember });
     } catch (err) {
@@ -175,32 +204,21 @@ app.post("/api/members/register", async (req, res) => {
     }
 });
 
-app.post("/api/members/login", async (req, res) => {
-    const { email, password } = req.body;
-
+// Protected Trainer Routes
+app.get("/api/trainer/members", authMiddleware, authorize("trainer"), async (req, res) => {
     try {
-        const member = await Member.findOne({ email });
-        if (!member) {
-            return res.status(404).json({ message: 'Member not found' });
-        }
-
-        const isMatch = await bcrypt.compare(password, member.password);
-        if (!isMatch) {
-            return res.status(400).json({ message: 'Invalid credentials' });
-        }
-
-        const token = jwt.sign({ memberId: member._id }, process.env.JWT_SECRET || "myjwtsecretkey1616", { expiresIn: '1h' });
-
-        res.json({ token, message: 'Login successful', member });
+        const members = await Member.find().select('-password');
+        res.json(members);
     } catch (err) {
         console.error(err);
         res.status(500).json({ message: 'Server Error' });
     }
 });
 
-app.get("/api/members/me", authMiddleware, async (req, res) => {
+// Protected Member Profile Routes
+app.get("/api/members/profile", authMiddleware, authorize("member"), async (req, res) => {
     try {
-        const member = await Member.findById(req.memberId);
+        const member = await Member.findById(req.user.id).select('-password');
         if (!member) {
             return res.status(404).json({ message: 'Member not found' });
         }
@@ -208,6 +226,74 @@ app.get("/api/members/me", authMiddleware, async (req, res) => {
     } catch (err) {
         console.error(err);
         res.status(500).json({ message: 'Server Error' });
+    }
+});
+
+app.put("/api/members/profile", authMiddleware, authorize("member"), async (req, res) => {
+    try {
+        const member = await Member.findById(req.user.id);
+        if (!member) {
+            return res.status(404).json({ message: 'Member not found' });
+        }
+
+        const updatedMember = await Member.findByIdAndUpdate(
+            req.user.id,
+            { $set: req.body },
+            { new: true }
+        ).select('-password');
+
+        res.json(updatedMember);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: 'Server Error' });
+    }
+});
+
+// Event Routes
+app.post("/api/events", authMiddleware, async (req, res) => {
+    try {
+        const { title, date } = req.body;
+        const event = new Event({
+            userId: req.user.id,
+            title,
+            date: new Date(date)
+        });
+        await event.save();
+        res.status(201).json(event);
+    } catch (error) {
+        res.status(500).json({ message: "Error creating event" });
+    }
+});
+
+app.get("/api/events", authMiddleware, async (req, res) => {
+    try {
+        const events = await Event.find({ userId: req.user.id });
+        res.json(events);
+    } catch (error) {
+        res.status(500).json({ message: "Error fetching events" });
+    }
+});
+
+app.delete("/api/events/:id", authMiddleware, async (req, res) => {
+    try {
+        await Event.findOneAndDelete({ _id: req.params.id, userId: req.user.id });
+        res.json({ message: "Event deleted" });
+    } catch (error) {
+        res.status(500).json({ message: "Error deleting event" });
+    }
+});
+
+app.put("/api/events/:id", authMiddleware, async (req, res) => {
+    try {
+        const { title, date } = req.body;
+        const event = await Event.findOneAndUpdate(
+            { _id: req.params.id, userId: req.user.id },
+            { title, date },
+            { new: true }
+        );
+        res.json(event);
+    } catch (error) {
+        res.status(500).json({ message: "Error updating event" });
     }
 });
 

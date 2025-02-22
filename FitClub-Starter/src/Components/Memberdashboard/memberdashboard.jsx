@@ -1,9 +1,9 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Calendar from 'react-calendar';
 import 'react-calendar/dist/Calendar.css';
 import "./memberdashboard.css";
 import { useauthstore } from "../../Store/useauthstore";
-
+import { useNavigate } from "react-router-dom";
 
 const MemberDashboard = () => {
     const [membership] = useState({
@@ -11,6 +11,7 @@ const MemberDashboard = () => {
         renewalDate: "2023-11-30",
     });
     const { authuser } = useauthstore();
+    const navigate = useNavigate();
     const [trainer] = useState({
         name: "John Fitness",
         specialization: "Strength Training",
@@ -26,24 +27,41 @@ const MemberDashboard = () => {
     });
 
     const [date, setDate] = useState(new Date());
-    const [events, setEvents] = useState([
-        { date: new Date(2025, 1, 15), title: "HIIT Session" },
-        { date: new Date(2025, 1, 17), title: "Yoga Class" },
-        { date: new Date(2025, 1, 20), title: "Nutrition Workshop" },
-    ]);
-
+    const [events, setEvents] = useState([]);
     const [newEvent, setNewEvent] = useState("");
     const [editingIndex, setEditingIndex] = useState(null);
     const [selectedEventIndex, setSelectedEventIndex] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
 
+    useEffect(() => {
+        const token = localStorage.getItem('token');
+        if (!token) {
+            navigate('/login');
+            return;
+        }
 
-    const hasEvents = (date) => {
-        return events.some(event => event.date.toDateString() === date.toDateString());
-    };
+        fetchEvents();
+    }, [navigate]);
 
-    const getEventInitials = (date) => {
-        const event = events.find(event => event.date.toDateString() === date.toDateString());
-        return event ? event.title.split(" ").map(word => word[0]).join("") : "";
+    const fetchEvents = async () => {
+        try {
+            const response = await fetch('http://localhost:5000/api/events', {
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                }
+            });
+            if (!response.ok) throw new Error('Failed to fetch events');
+            const data = await response.json();
+            setEvents(data.map(event => ({
+                ...event,
+                date: new Date(event.date)
+            })));
+        } catch (err) {
+            setError(err.message);
+        } finally {
+            setLoading(false);
+        }
     };
 
     const handleDateClick = (selectedDate) => {
@@ -52,19 +70,46 @@ const MemberDashboard = () => {
         setEditingIndex(null);
     };
 
-    const handleAddEvent = () => {
+    const handleAddEvent = async () => {
         if (newEvent.trim() === "") return;
 
-        if (editingIndex !== null) {
-            const updatedEvents = [...events];
-            updatedEvents[editingIndex].title = newEvent;
-            setEvents(updatedEvents);
-        } else {
-            setEvents([...events, { date, title: newEvent }]);
-        }
+        try {
+            if (editingIndex !== null) {
+                const event = events[editingIndex];
+                const response = await fetch(`http://localhost:5000/api/events/${event._id}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    },
+                    body: JSON.stringify({
+                        title: newEvent,
+                        date: date
+                    })
+                });
+                if (!response.ok) throw new Error('Failed to update event');
+                await fetchEvents();
+            } else {
+                const response = await fetch('http://localhost:5000/api/events', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    },
+                    body: JSON.stringify({
+                        title: newEvent,
+                        date: date
+                    })
+                });
+                if (!response.ok) throw new Error('Failed to create event');
+                await fetchEvents();
+            }
 
-        setNewEvent("");
-        setEditingIndex(null);
+            setNewEvent("");
+            setEditingIndex(null);
+        } catch (err) {
+            setError(err.message);
+        }
     };
 
     const handleEditEvent = (index) => {
@@ -73,13 +118,28 @@ const MemberDashboard = () => {
         setEditingIndex(index);
     };
 
-    const handleDeleteEvent = (index) => {
-        setEvents(events.filter((_, i) => i !== index));
+    const handleDeleteEvent = async (index) => {
+        try {
+            const event = events[index];
+            const response = await fetch(`http://localhost:5000/api/events/${event._id}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                }
+            });
+            if (!response.ok) throw new Error('Failed to delete event');
+            await fetchEvents();
+        } catch (err) {
+            setError(err.message);
+        }
     };
 
     const handleEventClick = (index) => {
         setSelectedEventIndex(index === selectedEventIndex ? null : index);
     };
+
+    if (loading) return <div className="loading">Loading...</div>;
+    if (error) return <div className="error">{error}</div>;
 
     return (
         <div className="dashboard">
@@ -89,6 +149,15 @@ const MemberDashboard = () => {
                 </div>
                 <div className="navbar-right">
                     <img src={member.profilePic} alt="Profile" className="profile-pic" />
+                    <button 
+                        className="logout-btn"
+                        onClick={() => {
+                            localStorage.removeItem('token');
+                            navigate('/login');
+                        }}
+                    >
+                        Logout
+                    </button>
                 </div>
             </div>
 
@@ -122,11 +191,20 @@ const MemberDashboard = () => {
                         onChange={handleDateClick}
                         value={date}
                         tileClassName={({ date }) =>
-                            hasEvents(date) ? 'has-event' : null
+                            events.some(event => event.date.toDateString() === date.toDateString())
+                                ? 'has-event'
+                                : null
                         }
-                        tileContent={({ date }) =>
-                            hasEvents(date) ? <div className="event-marker">{getEventInitials(date)}</div> : null
-                        }
+                        tileContent={({ date }) => {
+                            const event = events.find(event => 
+                                event.date.toDateString() === date.toDateString()
+                            );
+                            return event ? (
+                                <div className="event-marker">
+                                    {event.title.split(" ").map(word => word[0]).join("")}
+                                </div>
+                            ) : null;
+                        }}
                     />
                     <div className="event-form">
                         <input
@@ -136,17 +214,38 @@ const MemberDashboard = () => {
                             placeholder="Enter event title"
                             className="transparent-input"
                         />
-                        <button className="transparent-button" onClick={handleAddEvent}>{editingIndex !== null ? "Edit Event" : "Add Event"}</button>
+                        <button 
+                            className="transparent-button"
+                            onClick={handleAddEvent}
+                        >
+                            {editingIndex !== null ? "Edit Event" : "Add Event"}
+                        </button>
                     </div>
                     <div className="event-list">
                         <h3>Upcoming Events</h3>
                         {events.map((event, index) => (
-                            <div key={index} className="event-item" onClick={() => handleEventClick(index)}>
-                                <p><strong>{event.title}</strong> - {event.date.toDateString()}</p>
+                            <div 
+                                key={event._id} 
+                                className="event-item"
+                                onClick={() => handleEventClick(index)}
+                            >
+                                <p>
+                                    <strong>{event.title}</strong> - {event.date.toDateString()}
+                                </p>
                                 {selectedEventIndex === index && (
                                     <div className="event-actions">
-                                        <button className="transparent-button" onClick={() => handleEditEvent(index)}>Edit</button>
-                                        <button className="transparent-button" onClick={() => handleDeleteEvent(index)}>Delete</button>
+                                        <button 
+                                            className="transparent-button"
+                                            onClick={() => handleEditEvent(index)}
+                                        >
+                                            Edit
+                                        </button>
+                                        <button 
+                                            className="transparent-button"
+                                            onClick={() => handleDeleteEvent(index)}
+                                        >
+                                            Delete
+                                        </button>
                                     </div>
                                 )}
                             </div>

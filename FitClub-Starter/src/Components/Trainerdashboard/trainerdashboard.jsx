@@ -1,144 +1,112 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useauthstore } from "../../Store/useauthstore";
+import { useNavigate } from "react-router-dom";
 import "./trainerdashboard.css";
 
 const Trainerdashboard = () => {
-    const { authuser } = useauthstore(); // Get trainer's username
+    const { authuser } = useauthstore();
+    const navigate = useNavigate();
+    const [members, setMembers] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
 
-    // Mock data for schedule
-    const [schedule, setSchedule] = useState([
-        { time: "9:00 AM", client: "John Doe" },
-        { time: "11:00 AM", client: "Jane Smith" },
-        { time: "2:00 PM", client: "Alice Johnson" },
-        { time: "4:00 PM", client: "Bob Brown" },
-    ]);
+    useEffect(() => {
+        const token = localStorage.getItem('token');
+        if (!token) {
+            navigate('/login');
+            return;
+        }
 
-    // Mock data for progress
-    const [progress, setProgress] = useState({
-        "John Doe": 50,
-        "Jane Smith": 70,
-        "Alice Johnson": 30,
-        "Bob Brown": 85,
-    });
+        fetchMembers();
+    }, [navigate]);
 
-    // State for new appointment
-    const [newAppointment, setNewAppointment] = useState({
-        time: "",
-        client: "",
-    });
-
-
-    const convertTo12HourFormat = (time) => {
-        let [hours, minutes] = time.split(":");
-        let ampm = hours >= 12 ? "PM" : "AM";
-        hours = hours % 12 || 12; // Convert "00" or "12" to "12"
-        return `${hours}:${minutes} ${ampm}`;
-    };
-
-    // Handle input change
-    const handleInputChange = (e) => {
-        const { name, value } = e.target;
-        setNewAppointment({ ...newAppointment, [name]: value });
-    };
-
-    // Handle adding an appointment
-    const handleAddAppointment = (e) => {
-        e.preventDefault();
-        if (newAppointment.time && newAppointment.client) {
-            const formattedTime = convertTo12HourFormat(newAppointment.time); // Convert time
-            setSchedule([...schedule, { time: formattedTime, client: newAppointment.client }]);
-
-            // Add new client to progress with default 0%
-            setProgress({ ...progress, [newAppointment.client]: 0 });
-
-            setNewAppointment({ time: "", client: "" }); // Clear the form
-        } else {
-            alert("Please fill in both time and client name.");
+    const fetchMembers = async () => {
+        try {
+            const response = await fetch('http://localhost:5000/api/trainer/members', {
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                }
+            });
+            if (!response.ok) throw new Error('Failed to fetch members');
+            const data = await response.json();
+            setMembers(data);
+        } catch (err) {
+            setError(err.message);
+        } finally {
+            setLoading(false);
         }
     };
 
-    // Handle progress update
-    const handleProgressChange = (client, newValue) => {
-        setProgress({ ...progress, [client]: newValue });
-    };
+    if (loading) return <div className="loading">Loading...</div>;
+    if (error) return <div className="error">{error}</div>;
 
     return (
         <div className="trainer-dashboard">
-            {/* Navbar/Header */}
             <div className="navbar">
-                <h2>Welcome, {authuser}</h2>
+                <div className="navbar-left">
+                    <h2>Welcome, Trainer {authuser}</h2>
+                </div>
+                <div className="navbar-right">
+                    <button 
+                        className="logout-btn"
+                        onClick={() => {
+                            localStorage.removeItem('token');
+                            navigate('/login');
+                        }}
+                    >
+                        Logout
+                    </button>
+                </div>
             </div>
 
             <div className="dashboard-container">
-                {/* Left Side: Today's Schedule */}
-                <div className="schedule">
-                    <h2>Today's Schedule</h2>
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Time</th>
-                                <th>Client</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {schedule.map((appointment, index) => (
-                                <tr key={index}>
-                                    <td>{appointment.time}</td>
-                                    <td>{appointment.client}</td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
-
-                {/* Right Side: Update Schedule */}
-                <div className="update-schedule">
-                    <h2>Update Schedule</h2>
-                    <form onSubmit={handleAddAppointment}>
-                        <div className="form-group">
-                            <label>Time:</label>
-                            <input
-                                type="time"
-                                name="time"
-                                value={newAppointment.time}
-                                onChange={handleInputChange}
-                                required
-                            />
-                        </div>
-                        <div className="form-group">
-                            <label>Client Name:</label>
-                            <input
-                                type="text"
-                                name="client"
-                                value={newAppointment.client}
-                                onChange={handleInputChange}
-                                placeholder="Enter client name"
-                                required
-                            />
-                        </div>
-                        <button type="submit">Add Appointment</button>
-                    </form>
-                </div>
-
-                {/* Progress Report Box */}
-                <div className="progress-report">
-                    <h2>Progress Report</h2>
-                    {Object.keys(progress).map((client) => (
-                        <div key={client} className="progress-item">
-                            <span>{client}</span>
-                            <div className="progress-bar-container">
-                                <div className="progress-bar" style={{ width: `${progress[client]}%` }}></div>
+                <div className="members-list">
+                    <h2>Your Members</h2>
+                    <div className="members-grid">
+                        {members.map((member) => (
+                            <div key={member._id} className="member-card">
+                                <img 
+                                    src={member.profilePic || "https://via.placeholder.com/150"} 
+                                    alt={member.username} 
+                                    className="member-image"
+                                />
+                                <div className="member-info">
+                                    <h3>{member.username}</h3>
+                                    <p>{member.email}</p>
+                                    <div className="membership-status">
+                                        <span>Membership: </span>
+                                        <span className="status active">Active</span>
+                                    </div>
+                                </div>
+                                <div className="member-actions">
+                                    <button className="action-btn">View Progress</button>
+                                    <button className="action-btn">Send Message</button>
+                                </div>
                             </div>
-                            <input
-                                type="range"
-                                min="0"
-                                max="100"
-                                value={progress[client]}
-                                onChange={(e) => handleProgressChange(client, e.target.value)}
-                            />
-                            <span>{progress[client]}%</span>
+                        ))}
+                    </div>
+                </div>
+
+                <div className="trainer-stats">
+                    <h2>Dashboard Statistics</h2>
+                    <div className="stats-grid">
+                        <div className="stat-card">
+                            <h3>Total Members</h3>
+                            <p className="stat-number">{members.length}</p>
                         </div>
-                    ))}
+                        <div className="stat-card">
+                            <h3>Active Sessions</h3>
+                            <p className="stat-number">12</p>
+                        </div>
+                        <div className="stat-card">
+                            <h3>This Week's Sessions</h3>
+                            <p className="stat-number">28</p>
+                        </div>
+                        <div className="stat-card">
+                            <h3>Member Progress</h3>
+                            <p className="stat-number">85%</p>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
