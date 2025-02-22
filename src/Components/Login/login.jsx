@@ -28,6 +28,10 @@ const Login = () => {
         if (data) {
             console.log("Login successful:", data);
             localStorage.setItem("token", data.token);
+            // Store the username for trainer dashboard
+            if (formData.role === "trainer") {
+                localStorage.setItem("trainerName", data.username);
+            }
             if (formData.role === "member") {
                 navigate("/memberdashboard");
             } else if (formData.role === "trainer") {
