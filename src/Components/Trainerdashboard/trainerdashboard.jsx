@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { LogOut, Users, Calendar, TrendingUp, MessageSquare, Award, Search, Edit2, Trash2 } from 'lucide-react';
 import { FaMale, FaFemale } from 'react-icons/fa';
-
+import ProfileDropdown from "../ProfileDropdown/ProfileDropdown"
 const Trainerdashboard = () => {
     const [members, setMembers] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -62,17 +62,10 @@ const Trainerdashboard = () => {
             <header className="bg-gray-800 shadow-lg">
                 <div className="max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8 flex justify-between items-center">
                     <h1 className="text-3xl font-bold text-white">Welcome, {trainerName || 'Trainer'}</h1>
-                    <button 
-                        onClick={() => {
-                            localStorage.removeItem('token');
-                            localStorage.removeItem('trainerName');
-                            navigate('/login');
-                        }}
-                        className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors duration-200"
-                    >
-                        <LogOut size={20} />
-                        Logout
-                    </button>
+                    <ProfileDropdown 
+    username={localStorage.getItem('username')} 
+    userType="trainer" 
+/>
                 </div>
             </header>
 

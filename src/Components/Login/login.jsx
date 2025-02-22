@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useauthstore } from "../../Store/useauthstore.js";
+import toast from 'react-hot-toast';
 
 const Login = () => {
     const [formData, setFormData] = useState({
@@ -8,7 +9,6 @@ const Login = () => {
         password: "",
         role: "member",
     });
-    const [errorMessage, setErrorMessage] = useState("");
     const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
     const { login } = useauthstore();
@@ -21,29 +21,39 @@ const Login = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         setLoading(true);
-        const data = await login(formData);
 
-        setErrorMessage("");
+        try {
+            const response = await fetch("http://localhost:5000/api/users/login", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify(formData),
+            });
 
-        if (data) {
-            console.log("Login successful:", data);
-            localStorage.setItem("token", data.token);
-            // Store the username for trainer dashboard
-            if (formData.role === "trainer") {
-                localStorage.setItem("trainerName", data.username);
+            const data = await response.json();
+
+            if (response.ok) {
+                localStorage.setItem('token', data.token);
+                localStorage.setItem('userType', formData.role);
+                localStorage.setItem('username', data.username);
+                
+                toast.success('Successfully logged in!');
+                
+                if (formData.role === "member") {
+                    navigate("/memberdashboard");
+                } else if (formData.role === "trainer") {
+                    navigate("/trainerdashboard");
+                }
+            } else {
+                toast.error(data.message || 'Invalid credentials');
             }
-            if (formData.role === "member") {
-                navigate("/memberdashboard");
-            } else if (formData.role === "trainer") {
-                navigate("/trainerdashboard");
-            } else if (formData.role === "admin") {
-                navigate("/admindashboard");
-            }
-        } else {
-            setErrorMessage(data?.message || "Invalid credentials");
+        } catch (error) {
+            console.error("Error:", error);
+            toast.error('Something went wrong. Please try again.');
+        } finally {
+            setLoading(false);
         }
-
-        setLoading(false);
     };
 
     return (
@@ -102,15 +112,8 @@ const Login = () => {
                             >
                                 <option value="member">Member</option>
                                 <option value="trainer">Trainer</option>
-                                <option value="admin">Admin</option>
                             </select>
                         </div>
-
-                        {errorMessage && (
-                            <div className="text-red-500 text-sm text-center">
-                                {errorMessage}
-                            </div>
-                        )}
 
                         <button
                             type="submit"

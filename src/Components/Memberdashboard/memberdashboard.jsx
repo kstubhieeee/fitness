@@ -5,7 +5,7 @@ import { useauthstore } from "../../Store/useauthstore";
 import { useNavigate } from "react-router-dom";
 import { Star, MessageSquare, LogOut, Search, Edit2, Trash2 } from 'lucide-react';
 import "./styles.css"
-
+import ProfileDropdown from "../ProfileDropdown/ProfileDropdown"
 const MemberDashboard = () => {
     const [trainers, setTrainers] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
@@ -157,16 +157,11 @@ const MemberDashboard = () => {
             <header className="bg-gray-800 shadow-lg">
                 <div className="max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8 flex justify-between items-center">
                     <h1 className="text-3xl font-bold text-white">Welcome, {authuser}</h1>
-                    <button 
-                        onClick={() => {
-                            localStorage.removeItem('token');
-                            navigate('/login');
-                        }}
-                        className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors duration-200"
-                    >
-                        <LogOut size={20} />
-                        Logout
-                    </button>
+                    <ProfileDropdown 
+    username={localStorage.getItem('username')} 
+    userType="member" 
+/>
+
                 </div>
             </header>
 
