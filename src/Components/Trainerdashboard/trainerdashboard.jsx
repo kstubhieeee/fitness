@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Users, Calendar, TrendingUp, MessageSquare, Award, Search, Plus } from 'lucide-react';
+import { Users, Calendar, TrendingUp, MessageSquare, Award, Search, Plus, Edit2, X } from 'lucide-react';
 import ProfileDropdown from "../ProfileDropdown/ProfileDropdown";
 import toast from 'react-hot-toast';
 
@@ -13,6 +13,10 @@ const Trainerdashboard = () => {
     const [selectedMember, setSelectedMember] = useState(null);
     const [showWorkoutForm, setShowWorkoutForm] = useState(false);
     const [showDietForm, setShowDietForm] = useState(false);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [currentWorkoutPlan, setCurrentWorkoutPlan] = useState(null);
+    const [currentDietPlan, setCurrentDietPlan] = useState(null);
+    const [isEditing, setIsEditing] = useState(false);
     const [workoutPlan, setWorkoutPlan] = useState({
         weeklyPlan: [
             { day: "Monday", exercises: [] },
@@ -70,6 +74,37 @@ const Trainerdashboard = () => {
         }
     };
 
+    const fetchCurrentPlans = async (memberId) => {
+        try {
+            // Fetch current workout plan
+            const workoutResponse = await fetch(`http://localhost:5000/api/workout-plans/${memberId}`, {
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                }
+            });
+            if (workoutResponse.ok) {
+                const workoutData = await workoutResponse.json();
+                setCurrentWorkoutPlan(workoutData);
+                setWorkoutPlan(workoutData); // Set for editing
+            }
+
+            // Fetch current diet plan
+            const dietResponse = await fetch(`http://localhost:5000/api/diet-plans/${memberId}`, {
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                }
+            });
+            if (dietResponse.ok) {
+                const dietData = await dietResponse.json();
+                setCurrentDietPlan(dietData);
+                setDietPlan(dietData); // Set for editing
+            }
+        } catch (error) {
+            console.error('Error fetching current plans:', error);
+            toast.error('Failed to fetch current plans');
+        }
+    };
+
     const handleAddExercise = (dayIndex) => {
         const newExercise = {
             name: "",
@@ -84,6 +119,12 @@ const Trainerdashboard = () => {
         setWorkoutPlan(updatedPlan);
     };
 
+    const handleRemoveExercise = (dayIndex, exerciseIndex) => {
+        const updatedPlan = { ...workoutPlan };
+        updatedPlan.weeklyPlan[dayIndex].exercises.splice(exerciseIndex, 1);
+        setWorkoutPlan(updatedPlan);
+    };
+
     const handleAddMeal = (dayIndex) => {
         const newMeal = {
             type: "breakfast",
@@ -92,6 +133,12 @@ const Trainerdashboard = () => {
 
         const updatedPlan = { ...dietPlan };
         updatedPlan.weeklyPlan[dayIndex].meals.push(newMeal);
+        setDietPlan(updatedPlan);
+    };
+
+    const handleRemoveMeal = (dayIndex, mealIndex) => {
+        const updatedPlan = { ...dietPlan };
+        updatedPlan.weeklyPlan[dayIndex].meals.splice(mealIndex, 1);
         setDietPlan(updatedPlan);
     };
 
@@ -104,6 +151,12 @@ const Trainerdashboard = () => {
 
         const updatedPlan = { ...dietPlan };
         updatedPlan.weeklyPlan[dayIndex].meals[mealIndex].foods.push(newFood);
+        setDietPlan(updatedPlan);
+    };
+
+    const handleRemoveFood = (dayIndex, mealIndex, foodIndex) => {
+        const updatedPlan = { ...dietPlan };
+        updatedPlan.weeklyPlan[dayIndex].meals[mealIndex].foods.splice(foodIndex, 1);
         setDietPlan(updatedPlan);
     };
 
@@ -127,8 +180,14 @@ const Trainerdashboard = () => {
 
     const handleSubmitWorkoutPlan = async () => {
         try {
-            const response = await fetch('http://localhost:5000/api/workout-plans', {
-                method: 'POST',
+            const url = isEditing 
+                ? `http://localhost:5000/api/workout-plans/${currentWorkoutPlan._id}`
+                : 'http://localhost:5000/api/workout-plans';
+            
+            const method = isEditing ? 'PUT' : 'POST';
+            
+            const response = await fetch(url, {
+                method: method,
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -140,21 +199,28 @@ const Trainerdashboard = () => {
             });
 
             if (response.ok) {
-                toast.success('Workout plan created successfully!');
+                toast.success(isEditing ? 'Workout plan updated successfully!' : 'Workout plan created successfully!');
                 setShowWorkoutForm(false);
+                setIsEditing(false);
             } else {
-                toast.error('Failed to create workout plan');
+                toast.error(isEditing ? 'Failed to update workout plan' : 'Failed to create workout plan');
             }
         } catch (error) {
-            console.error('Error creating workout plan:', error);
-            toast.error('Error creating workout plan');
+            console.error('Error with workout plan:', error);
+            toast.error('Error with workout plan');
         }
     };
 
     const handleSubmitDietPlan = async () => {
         try {
-            const response = await fetch('http://localhost:5000/api/diet-plans', {
-                method: 'POST',
+            const url = isEditing 
+                ? `http://localhost:5000/api/diet-plans/${currentDietPlan._id}`
+                : 'http://localhost:5000/api/diet-plans';
+            
+            const method = isEditing ? 'PUT' : 'POST';
+
+            const response = await fetch(url, {
+                method: method,
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -166,22 +232,28 @@ const Trainerdashboard = () => {
             });
 
             if (response.ok) {
-                toast.success('Diet plan created successfully!');
+                toast.success(isEditing ? 'Diet plan updated successfully!' : 'Diet plan created successfully!');
                 setShowDietForm(false);
+                setIsEditing(false);
             } else {
-                toast.error('Failed to create diet plan');
+                toast.error(isEditing ? 'Failed to update diet plan' : 'Failed to create diet plan');
             }
         } catch (error) {
-            console.error('Error creating diet plan:', error);
-            toast.error('Error creating diet plan');
+            console.error('Error with diet plan:', error);
+            toast.error('Error with diet plan');
         }
     };
 
+    const filteredMembers = members.filter(member => 
+        member.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        member.email.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
     const stats = [
         { icon: <Users size={24} />, title: "Total Members", value: members.length },
-        { icon: <Calendar size={24} />, title: "Active Sessions", value: "12" },
-        { icon: <TrendingUp size={24} />, title: "Weekly Sessions", value: "28" },
-        { icon: <Award size={24} />, title: "Member Progress", value: "85%" }
+        { icon: <Calendar size={24} />, title: "Active Plans", value: members.filter(m => m.assignedTrainer).length },
+        { icon: <TrendingUp size={24} />, title: "Weekly Sessions", value: members.length * 3 },
+        { icon: <Award size={24} />, title: "Average Progress", value: "85%" }
     ];
 
     if (loading) return (
@@ -223,7 +295,9 @@ const Trainerdashboard = () => {
                         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
                         <input
                             type="text"
-                            placeholder="Search members..."
+                            placeholder="Search members by name or email..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
                             className="w-full pl-10 pr-4 py-3 bg-gray-800 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
                         />
                     </div>
@@ -231,7 +305,7 @@ const Trainerdashboard = () => {
 
                 {/* Members Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {members.map((member) => (
+                    {filteredMembers.map((member) => (
                         <div key={member._id} className="bg-gray-800 rounded-xl p-6 shadow-lg hover:transform hover:scale-105 transition-all duration-300">
                             <div className="flex items-center space-x-4 mb-4">
                                 <div className="w-16 h-16 bg-gray-700 rounded-full flex items-center justify-center">
@@ -260,24 +334,46 @@ const Trainerdashboard = () => {
 
                             <div className="flex flex-col space-y-2">
                                 <button 
-                                    onClick={() => {
+                                    onClick={async () => {
                                         setSelectedMember(member);
+                                        await fetchCurrentPlans(member._id);
+                                        setIsEditing(!!currentWorkoutPlan);
                                         setShowWorkoutForm(true);
                                     }}
                                     className="w-full bg-orange-500 hover:bg-orange-600 text-white py-2 px-4 rounded-lg transition-colors duration-200 flex items-center justify-center"
                                 >
-                                    <Plus size={16} className="mr-2" />
-                                    Create Workout Plan
+                                    {currentWorkoutPlan ? (
+                                        <>
+                                            <Edit2 size={16} className="mr-2" />
+                                            Edit Workout Plan
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Plus size={16} className="mr-2" />
+                                            Create Workout Plan
+                                        </>
+                                    )}
                                 </button>
                                 <button 
-                                    onClick={() => {
+                                    onClick={async () => {
                                         setSelectedMember(member);
+                                        await fetchCurrentPlans(member._id);
+                                        setIsEditing(!!currentDietPlan);
                                         setShowDietForm(true);
                                     }}
                                     className="w-full bg-green-500 hover:bg-green-600 text-white py-2 px-4 rounded-lg transition-colors duration-200 flex items-center justify-center"
                                 >
-                                    <Plus size={16} className="mr-2" />
-                                    Create Diet Plan
+                                    {currentDietPlan ? (
+                                        <>
+                                            <Edit2 size={16} className="mr-2" />
+                                            Edit Diet Plan
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Plus size={16} className="mr-2" />
+                                            Create Diet Plan
+                                        </>
+                                    )}
                                 </button>
                                 <button className="w-full bg-gray-700 hover:bg-gray-600 text-white py-2 px-4 rounded-lg transition-colors duration-200 flex items-center justify-center">
                                     <MessageSquare size={16} className="mr-2" />
@@ -290,18 +386,35 @@ const Trainerdashboard = () => {
 
                 {/* Workout Plan Form Modal */}
                 {showWorkoutForm && selectedMember && (
-                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
+                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
                         <div className="bg-gray-800 rounded-xl p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-                            <h2 className="text-2xl font-bold text-white mb-6">
-                                Create Workout Plan for {selectedMember.username}
-                            </h2>
+                            <div className="flex justify-between items-center mb-6">
+                                <h2 className="text-2xl font-bold text-white">
+                                    {isEditing ? 'Edit' : 'Create'} Workout Plan for {selectedMember.username}
+                                </h2>
+                                <button 
+                                    onClick={() => {
+                                        setShowWorkoutForm(false);
+                                        setIsEditing(false);
+                                    }}
+                                    className="text-gray-400 hover:text-white"
+                                >
+                                    <X size={24} />
+                                </button>
+                            </div>
                             
                             {workoutPlan.weeklyPlan.map((day, dayIndex) => (
                                 <div key={dayIndex} className="mb-6">
                                     <h3 className="text-xl font-semibold text-orange-500 mb-4">{day.day}</h3>
                                     
                                     {day.exercises.map((exercise, exerciseIndex) => (
-                                        <div key={exerciseIndex} className="bg-gray-700 p-4 rounded-lg mb-4">
+                                        <div key={exerciseIndex} className="bg-gray-700 p-4 rounded-lg mb-4 relative">
+                                            <button
+                                                onClick={() => handleRemoveExercise(dayIndex, exerciseIndex)}
+                                                className="absolute top-2 right-2 text-gray-400 hover:text-red-500"
+                                            >
+                                                <X size={16} />
+                                            </button>
                                             <input
                                                 type="text"
                                                 placeholder="Exercise name"
@@ -352,7 +465,10 @@ const Trainerdashboard = () => {
                             
                             <div className="flex justify-end space-x-4 mt-6">
                                 <button
-                                    onClick={() => setShowWorkoutForm(false)}
+                                    onClick={() => {
+                                        setShowWorkoutForm(false);
+                                        setIsEditing(false);
+                                    }}
                                     className="bg-gray-600 text-white px-6 py-2 rounded-lg hover:bg-gray-700 transition-colors duration-200"
                                 >
                                     Cancel
@@ -361,7 +477,7 @@ const Trainerdashboard = () => {
                                     onClick={handleSubmitWorkoutPlan}
                                     className="bg-orange-500 text-white px-6 py-2 rounded-lg hover:bg-orange-600 transition-colors duration-200"
                                 >
-                                    Save Workout Plan
+                                    {isEditing ? 'Update' : 'Save'} Workout Plan
                                 </button>
                             </div>
                         </div>
@@ -370,18 +486,35 @@ const Trainerdashboard = () => {
 
                 {/* Diet Plan Form Modal */}
                 {showDietForm && selectedMember && (
-                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
+                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
                         <div className="bg-gray-800 rounded-xl p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-                            <h2 className="text-2xl font-bold text-white mb-6">
-                                Create Diet Plan for {selectedMember.username}
-                            </h2>
+                            <div className="flex justify-between items-center mb-6">
+                                <h2 className="text-2xl font-bold text-white">
+                                    {isEditing ? 'Edit' : 'Create'} Diet Plan for {selectedMember.username}
+                                </h2>
+                                <button 
+                                    onClick={() => {
+                                        setShowDietForm(false);
+                                        setIsEditing(false);
+                                    }}
+                                    className="text-gray-400 hover:text-white"
+                                >
+                                    <X size={24} />
+                                </button>
+                            </div>
                             
                             {dietPlan.weeklyPlan.map((day, dayIndex) => (
                                 <div key={dayIndex} className="mb-6">
                                     <h3 className="text-xl font-semibold text-orange-500 mb-4">{day.day}</h3>
                                     
                                     {day.meals.map((meal, mealIndex) => (
-                                        <div key={mealIndex} className="bg-gray-700 p-4 rounded-lg mb-4">
+                                        <div key={mealIndex} className="bg-gray-700 p-4 rounded-lg mb-4 relative">
+                                            <button
+                                                onClick={() => handleRemoveMeal(dayIndex, mealIndex)}
+                                                className="absolute top-2 right-2 text-gray-400 hover:text-red-500"
+                                            >
+                                                <X size={16} />
+                                            </button>
                                             <select
                                                 value={meal.type}
                                                 onChange={(e) => handleMealChange(dayIndex, mealIndex, 'type', e.target.value)}
@@ -394,7 +527,7 @@ const Trainerdashboard = () => {
                                             </select>
                                             
                                             {meal.foods.map((food, foodIndex) => (
-                                                <div key={foodIndex} className="grid grid-cols-3 gap-2 mb-2">
+                                                <div key={foodIndex} className="grid grid-cols-3 gap-2 mb-2 relative">
                                                     <input
                                                         type="text"
                                                         placeholder="Food name"
@@ -409,13 +542,21 @@ const Trainerdashboard = () => {
                                                         onChange={(e) => handleFoodChange(dayIndex, mealIndex, foodIndex, 'quantity', e.target.value)}
                                                         className="bg-gray-600 text-white p-2 rounded"
                                                     />
-                                                    <input
-                                                        type="number"
-                                                        placeholder="Calories"
-                                                        value={food.calories}
-                                                        onChange={(e) => handleFoodChange(dayIndex, mealIndex, foodIndex, 'calories', parseInt(e.target.value))}
-                                                        className="bg-gray-600 text-white p-2 rounded"
-                                                    />
+                                                    <div className="flex gap-2">
+                                                        <input
+                                                            type="number"
+                                                            placeholder="Calories"
+                                                            value={food.calories}
+                                                            onChange={(e) => handleFoodChange(dayIndex, mealIndex, foodIndex, 'calories', parseInt(e.target.value))}
+                                                            className="bg-gray-600 text-white p-2 rounded flex-1"
+                                                        />
+                                                        <button
+                                                            onClick={() => handleRemoveFood(dayIndex, mealIndex, foodIndex)}
+                                                            className="text-gray-400 hover:text-red-500 p-2"
+                                                        >
+                                                            <X size={16} />
+                                                        </button>
+                                                    </div>
                                                 </div>
                                             ))}
                                             
@@ -439,7 +580,10 @@ const Trainerdashboard = () => {
                             
                             <div className="flex justify-end space-x-4 mt-6">
                                 <button
-                                    onClick={() => setShowDietForm(false)}
+                                    onClick={() => {
+                                        setShowDietForm(false);
+                                        setIsEditing(false);
+                                    }}
                                     className="bg-gray-600 text-white px-6 py-2 rounded-lg hover:bg-gray-700 transition-colors duration-200"
                                 >
                                     Cancel
@@ -448,7 +592,7 @@ const Trainerdashboard = () => {
                                     onClick={handleSubmitDietPlan}
                                     className="bg-green-500 text-white px-6 py-2 rounded-lg hover:bg-green-600 transition-colors duration-200"
                                 >
-                                    Save Diet Plan
+                                    {isEditing ? 'Update' : 'Save'} Diet Plan
                                 </button>
                             </div>
                         </div>

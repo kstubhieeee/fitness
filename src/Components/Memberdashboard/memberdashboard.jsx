@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import Calendar from 'react-calendar';
 import 'react-calendar/dist/Calendar.css';
 import { useNavigate } from "react-router-dom";
-import { Star, MessageSquare, Search, Edit2, Trash2, CheckCircle } from 'lucide-react';
+import { Star, MessageSquare, Search, Edit2, Trash2, CheckCircle, Filter, Clock, Dumbbell, Activity } from 'lucide-react';
 import "./styles.css";
 import ProfileDropdown from "../ProfileDropdown/ProfileDropdown";
 import toast from 'react-hot-toast';
@@ -22,6 +22,7 @@ const MemberDashboard = () => {
     const [workoutPlan, setWorkoutPlan] = useState(null);
     const [dietPlan, setDietPlan] = useState(null);
     const [memberProfile, setMemberProfile] = useState(null);
+    const [activeTab, setActiveTab] = useState('trainers'); // New state for tab management
 
     useEffect(() => {
         const token = localStorage.getItem('token');
@@ -254,6 +255,27 @@ const MemberDashboard = () => {
 
     const specializations = ['all', ...new Set(trainers.map(trainer => trainer.specialization))];
 
+    const stats = [
+        {
+            icon: <Activity className="w-6 h-6" />,
+            title: "Workout Progress",
+            value: "75%",
+            color: "bg-green-500"
+        },
+        {
+            icon: <Clock className="w-6 h-6" />,
+            title: "Training Hours",
+            value: "12.5h",
+            color: "bg-blue-500"
+        },
+        {
+            icon: <Dumbbell className="w-6 h-6" />,
+            title: "Exercises Done",
+            value: "48",
+            color: "bg-purple-500"
+        }
+    ];
+
     if (loading) return (
         <div className="min-h-screen bg-gray-900 flex items-center justify-center">
             <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-orange-500"></div>
@@ -262,10 +284,10 @@ const MemberDashboard = () => {
 
     return (
         <div className="min-h-screen bg-gray-900">
-            <header className="bg-gray-800 shadow-lg">
+            <header className="bg-gray-800 shadow-lg sticky top-0 z-50">
                 <div className="max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8 flex justify-between items-center">
                     <h1 className="text-3xl font-bold text-white">
-                        Welcome, {memberProfile?.username || 'Member'}
+                        Welcome back, {memberProfile?.username || 'Member'}! 👋
                     </h1>
                     <ProfileDropdown 
                         username={memberProfile?.username || localStorage.getItem('username')} 
@@ -275,61 +297,128 @@ const MemberDashboard = () => {
             </header>
 
             <main className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
-                <div className="mb-8 bg-gray-800 p-6 rounded-xl shadow-lg">
-                    <div className="flex flex-col md:flex-row gap-4 items-center">
-                        <div className="relative flex-1">
-                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
-                            <input
-                                type="text"
-                                placeholder="Search trainers..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className="w-full pl-10 pr-4 py-2 bg-gray-700 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
-                            />
+                {/* Stats Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                    {stats.map((stat, index) => (
+                        <div key={index} 
+                             className="bg-gray-800 p-6 rounded-xl shadow-lg hover:transform hover:scale-105 transition-all duration-300">
+                            <div className={`inline-flex p-3 rounded-lg ${stat.color} bg-opacity-20 mb-4`}>
+                                {stat.icon}
+                            </div>
+                            <h3 className="text-xl font-semibold text-white mb-2">{stat.title}</h3>
+                            <p className="text-3xl font-bold text-white">{stat.value}</p>
                         </div>
-                        <select
-                            value={selectedSpecialization}
-                            onChange={(e) => setSelectedSpecialization(e.target.value)}
-                            className="px-4 py-2 bg-gray-700 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
-                        >
-                            {specializations.map(spec => (
-                                <option key={spec} value={spec}>
-                                    {spec.charAt(0).toUpperCase() + spec.slice(1)}
-                                </option>
-                            ))}
-                        </select>
-                    </div>
+                    ))}
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    <div className="lg:col-span-2 space-y-6">
-                        <h2 className="text-2xl font-bold text-white mb-6">Available Trainers</h2>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Tab Navigation */}
+                <div className="flex space-x-4 mb-8 border-b border-gray-700">
+                    <button
+                        onClick={() => setActiveTab('trainers')}
+                        className={`px-4 py-2 font-medium transition-colors duration-200 ${
+                            activeTab === 'trainers' 
+                            ? 'text-orange-500 border-b-2 border-orange-500' 
+                            : 'text-gray-400 hover:text-white'
+                        }`}
+                    >
+                        Find Trainers
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('schedule')}
+                        className={`px-4 py-2 font-medium transition-colors duration-200 ${
+                            activeTab === 'schedule' 
+                            ? 'text-orange-500 border-b-2 border-orange-500' 
+                            : 'text-gray-400 hover:text-white'
+                        }`}
+                    >
+                        My Schedule
+                    </button>
+                    {selectedTrainer && (
+                        <button
+                            onClick={() => setActiveTab('plans')}
+                            className={`px-4 py-2 font-medium transition-colors duration-200 ${
+                                activeTab === 'plans' 
+                                ? 'text-orange-500 border-b-2 border-orange-500' 
+                                : 'text-gray-400 hover:text-white'
+                            }`}
+                        >
+                            My Plans
+                        </button>
+                    )}
+                </div>
+
+                {activeTab === 'trainers' && (
+                    <>
+                        <div className="mb-8 bg-gray-800 p-6 rounded-xl shadow-lg">
+                            <div className="flex flex-col md:flex-row gap-4 items-center">
+                                <div className="relative flex-1">
+                                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+                                    <input
+                                        type="text"
+                                        placeholder="Search trainers by name or specialization..."
+                                        value={searchTerm}
+                                        onChange={(e) => setSearchTerm(e.target.value)}
+                                        className="w-full pl-10 pr-4 py-3 bg-gray-700 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                                    />
+                                </div>
+                                <div className="relative">
+                                    <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+                                    <select
+                                        value={selectedSpecialization}
+                                        onChange={(e) => setSelectedSpecialization(e.target.value)}
+                                        className="pl-10 pr-4 py-3 bg-gray-700 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 appearance-none"
+                                    >
+                                        <option value="all">All Specializations</option>
+                                        {specializations.filter(spec => spec !== 'all').map(spec => (
+                                            <option key={spec} value={spec}>
+                                                {spec.charAt(0).toUpperCase() + spec.slice(1)}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                             {filteredTrainers.map(trainer => (
-                                <div key={trainer._id} className="bg-gray-800 rounded-xl p-6 shadow-lg hover:transform hover:scale-105 transition-transform duration-200">
+                                <div key={trainer._id} 
+                                     className="bg-gray-800 rounded-xl p-6 shadow-lg hover:transform hover:scale-105 transition-all duration-300">
                                     <div className="flex items-start space-x-4">
                                         <img
                                             src={trainer.photo}
                                             alt={trainer.fullName}
-                                            className="w-20 h-20 rounded-full object-cover"
+                                            className="w-20 h-20 rounded-full object-cover ring-2 ring-orange-500"
                                         />
-
                                         <div className="flex-1">
                                             <h3 className="text-xl font-semibold text-white">{trainer.fullName}</h3>
-                                            <p className="text-orange-500">{trainer.specialization}</p>
+                                            <div className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-500 text-white mt-2">
+                                                {trainer.specialization}
+                                            </div>
                                             <div className="flex items-center mt-2">
-                                                <Star className="text-yellow-400" size={16} fill="currentColor" />
-                                                <span className="ml-1 text-white">{trainer.rating || 'New'}</span>
-                                                <span className="text-gray-400 ml-1">
+                                                {[...Array(5)].map((_, i) => (
+                                                    <Star
+                                                        key={i}
+                                                        className={`w-4 h-4 ${
+                                                            i < Math.floor(trainer.rating || 0)
+                                                                ? 'text-yellow-400 fill-current'
+                                                                : 'text-gray-400'
+                                                        }`}
+                                                    />
+                                                ))}
+                                                <span className="text-gray-400 ml-2">
                                                     ({trainer.reviews?.length || 0} reviews)
                                                 </span>
                                             </div>
-                                            <p className="text-gray-400 mt-2">{trainer.experience} years experience</p>
-                                            <p className="text-white font-semibold mt-2">${trainer.feePerMonth}/month</p>
+                                            <p className="text-gray-400 mt-2">
+                                                {trainer.experience} years experience
+                                            </p>
+                                            <p className="text-white font-semibold mt-2">
+                                                ${trainer.feePerMonth}/month
+                                            </p>
                                             <div className="mt-4 flex space-x-3">
                                                 {selectedTrainer?._id === trainer._id ? (
                                                     <button 
-                                                        className="bg-green-500 text-white px-4 py-2 rounded-lg flex items-center gap-2"
+                                                        className="flex-1 bg-green-500 text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2"
                                                         disabled
                                                     >
                                                         <CheckCircle size={16} />
@@ -338,14 +427,13 @@ const MemberDashboard = () => {
                                                 ) : (
                                                     <button 
                                                         onClick={() => handleSelectTrainer(trainer)}
-                                                        className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors duration-200"
+                                                        className="flex-1 bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2 transition-colors duration-200"
                                                     >
                                                         Select Trainer
                                                     </button>
                                                 )}
                                                 <button className="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors duration-200">
                                                     <MessageSquare size={16} />
-                                                    Message
                                                 </button>
                                             </div>
                                         </div>
@@ -353,90 +441,137 @@ const MemberDashboard = () => {
                                 </div>
                             ))}
                         </div>
-                    </div>
+                    </>
+                )}
 
-                    <div className="space-y-6">
-                        <div className="bg-gray-800 rounded-xl p-6 shadow-lg">
-                            <h2 className="text-2xl font-bold text-white mb-6">Schedule</h2>
-                            <Calendar
-                                onChange={setDate}
-                                value={date}
-                                className="bg-gray-700 border-0 rounded-lg shadow-lg p-4 w-full"
-                                tileClassName={({ date }) =>
-                                    events.some(event => event.date.toDateString() === date.toDateString())
-                                        ? 'bg-orange-500 text-white rounded-full'
-                                        : null
-                                }
-                            />
-                            <div className="mt-6 space-y-4">
-                                <input
-                                    type="text"
-                                    value={newEvent}
-                                    onChange={(e) => setNewEvent(e.target.value)}
-                                    placeholder="Add new event..."
-                                    className="w-full px-4 py-2 bg-gray-700 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                {activeTab === 'schedule' && (
+                    <div className="bg-gray-800 rounded-xl p-6 shadow-lg">
+                        <div className="grid md:grid-cols-2 gap-8">
+                            <div>
+                                <h2 className="text-2xl font-bold text-white mb-6">My Calendar</h2>
+                                <Calendar
+                                    onChange={setDate}
+                                    value={date}
+                                    className="bg-gray-700 border-0 rounded-lg shadow-lg p-4 w-full"
+                                    tileClassName={({ date }) =>
+                                        events.some(event => event.date.toDateString() === date.toDateString())
+                                            ? 'bg-orange-500 text-white rounded-full'
+                                            : null
+                                    }
                                 />
-                                <button
-                                    onClick={editingEvent ? () => handleEditEvent(events.find(e => e._id === editingEvent)) : handleAddEvent}
-                                    className="w-full bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg transition-colors duration-200"
-                                >
-                                    {editingEvent ? 'Update Event' : 'Add Event'}
-                                </button>
+                            </div>
+                            <div>
+                                <h2 className="text-2xl font-bold text-white mb-6">Events</h2>
+                                <div className="space-y-4">
+                                    <div className="flex gap-4">
+                                        <input
+                                            type="text"
+                                            value={newEvent}
+                                            onChange={(e) => setNewEvent(e.target.value)}
+                                            placeholder="Add new event..."
+                                            className="flex-1 px-4 py-2 bg-gray-700 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                                        />
+                                        <button
+                                            onClick={editingEvent ? () => handleEditEvent(events.find(e => e._id === editingEvent)) : handleAddEvent}
+                                            className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-2 rounded-lg transition-colors duration-200"
+                                        >
+                                            {editingEvent ? 'Update' : 'Add'}
+                                        </button>
+                                    </div>
+                                    <div className="space-y-2 mt-4">
+                                        {events.map(event => (
+                                            <div key={event._id} className="flex items-center justify-between bg-gray-700 p-4 rounded-lg">
+                                                <div>
+                                                    <p className="text-white font-medium">{event.title}</p>
+                                                    <p className="text-gray-400 text-sm">
+                                                        {event.date.toLocaleDateString()}
+                                                    </p>
+                                                </div>
+                                                <div className="flex space-x-2">
+                                                    <button
+                                                        onClick={() => handleEditEvent(event)}
+                                                        className="text-blue-400 hover:text-blue-300 transition-colors duration-200"
+                                                    >
+                                                        <Edit2 size={16} />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleDeleteEvent(event._id)}
+                                                        className="text-red-400 hover:text-red-300 transition-colors duration-200"
+                                                    >
+                                                        <Trash2 size={16} />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
                             </div>
                         </div>
+                    </div>
+                )}
 
-                        {selectedTrainer && workoutPlan && (
+                {activeTab === 'plans' && selectedTrainer && (
+                    <div className="space-y-8">
+                        {workoutPlan && (
                             <div className="bg-gray-800 rounded-xl p-6 shadow-lg">
-                                <h2 className="text-2xl font-bold text-white mb-6">Workout Plan</h2>
-                                {workoutPlan.weeklyPlan.map((day, index) => (
-                                    <div key={index} className="mb-4">
-                                        <h3 className="text-lg font-semibold text-orange-500 mb-2">{day.day}</h3>
-                                        <div className="space-y-2">
-                                            {day.exercises.map((exercise, i) => (
-                                                <div key={i} className="bg-gray-700 p-3 rounded-lg">
-                                                    <p className="text-white font-medium">{exercise.name}</p>
-                                                    <p className="text-gray-400">
-                                                        {exercise.sets} sets × {exercise.reps} reps
-                                                        {exercise.duration && ` • ${exercise.duration} mins`}
-                                                    </p>
-                                                    {exercise.notes && (
-                                                        <p className="text-gray-400 text-sm mt-1">{exercise.notes}</p>
-                                                    )}
-                                                </div>
-                                            ))}
+                                <h2 className="text-2xl font-bold text-white mb-6">My Workout Plan</h2>
+                                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                    {workoutPlan.weeklyPlan.map((day, index) => (
+                                        <div key={index} className="bg-gray-700 rounded-lg p-4">
+                                            <h3 className="text-lg font-semibold text-orange-500 mb-4">{day.day}</h3>
+                                            <div className="space-y-3">
+                                                {day.exercises.map((exercise, i) => (
+                                                    <div key={i} className="bg-gray-600 p-3 rounded-lg">
+                                                        <p className="text-white font-medium">{exercise.name}</p>
+                                                        <div className="text-gray-400 text-sm mt-1">
+                                                            <span>{exercise.sets} sets × {exercise.reps} reps</span>
+                                                            {exercise.duration && (
+                                                                <span className="ml-2">• {exercise.duration} mins</span>
+                                                            )}
+                                                        </div>
+                                                        {exercise.notes && (
+                                                            <p className="text-gray-400 text-sm mt-2 italic">
+                                                                {exercise.notes}
+                                                            </p>
+                                                        )}
+                                                    </div>
+                                                ))}
+                                            </div>
                                         </div>
-                                    </div>
-                                ))}
+                                    ))}
+                                </div>
                             </div>
                         )}
 
-                        {selectedTrainer && dietPlan && (
+                        {dietPlan && (
                             <div className="bg-gray-800 rounded-xl p-6 shadow-lg">
-                                <h2 className="text-2xl font-bold text-white mb-6">Diet Plan</h2>
-                                {dietPlan.weeklyPlan.map((day, index) => (
-                                    <div key={index} className="mb-4">
-                                        <h3 className="text-lg font-semibold text-orange-500 mb-2">{day.day}</h3>
-                                        <div className="space-y-2">
-                                            {day.meals.map((meal, i) => (
-                                                <div key={i} className="bg-gray-700 p-3 rounded-lg">
-                                                    <p className="text-white font-medium capitalize">{meal.type}</p>
-                                                    <div className="space-y-1 mt-2">
-                                                        {meal.foods.map((food, j) => (
-                                                            <div key={j} className="flex justify-between text-gray-400">
-                                                                <span>{food.name}</span>
-                                                                <span>{food.quantity}</span>
-                                                            </div>
-                                                        ))}
+                                <h2 className="text-2xl font-bold text-white mb-6">My Diet Plan</h2>
+                                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                    {dietPlan.weeklyPlan.map((day, index) => (
+                                        <div key={index} className="bg-gray-700 rounded-lg p-4">
+                                            <h3 className="text-lg font-semibold text-orange-500 mb-4">{day.day}</h3>
+                                            <div className="space-y-3">
+                                                {day.meals.map((meal, i) => (
+                                                    <div key={i} className="bg-gray-600 p-3 rounded-lg">
+                                                        <p className="text-white font-medium capitalize">{meal.type}</p>
+                                                        <div className="mt-2 space-y-1">
+                                                            {meal.foods.map((food, j) => (
+                                                                <div key={j} className="flex justify-between text-sm">
+                                                                    <span className="text-gray-300">{food.name}</span>
+                                                                    <span className="text-gray-400">{food.quantity}</span>
+                                                                </div>
+                                                            ))}
+                                                        </div>
                                                     </div>
-                                                </div>
-                                            ))}
+                                                ))}
+                                            </div>
                                         </div>
-                                    </div>
-                                ))}
+                                    ))}
+                                </div>
                             </div>
                         )}
                     </div>
-                </div>
+                )}
             </main>
         </div>
     );

@@ -1,20 +1,89 @@
 /* Custom styles for React Calendar */
 .react-calendar {
-    background-color: #2d3748 !important;
-    /* bg-gray-800 */
+    width: 100% !important;
+    background-color: #1f2937 !important;
     border: none !important;
-    border-radius: 10px;
-    color: white !important;
+    border-radius: 0.75rem;
+    padding: 1rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
 }
 
 .react-calendar__tile {
+    padding: 1em 0.5em;
     background: none !important;
     color: white !important;
+    position: relative;
+    height: 60px;
+}
+
+.react-calendar__tile:enabled:hover,
+.react-calendar__tile:enabled:focus {
+    background-color: rgba(249, 115, 22, 0.1) !important;
+    border-radius: 9999px;
 }
 
 .react-calendar__tile--active {
     background: #f97316 !important;
-    /* bg-orange-500 */
+    border-radius: 9999px;
     color: white !important;
-    border-radius: 50%;
+}
+
+.react-calendar__tile--now {
+    background: rgba(249, 115, 22, 0.2) !important;
+    border-radius: 9999px;
+}
+
+.react-calendar__navigation {
+    margin-bottom: 1rem;
+}
+
+.react-calendar__navigation button {
+    color: white !important;
+    background: none !important;
+    border-radius: 0.5rem;
+    min-width: 44px;
+    font-size: 1.2rem;
+    padding: 0.5rem;
+}
+
+.react-calendar__navigation button:enabled:hover,
+.react-calendar__navigation button:enabled:focus {
+    background-color: rgba(249, 115, 22, 0.1) !important;
+}
+
+.react-calendar__month-view__weekdays {
+    color: #f97316 !important;
+    font-weight: bold;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    margin-bottom: 0.5rem;
+}
+
+.react-calendar__month-view__days__day--weekend {
+    color: #f97316 !important;
+}
+
+.react-calendar__tile:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Custom scrollbar for webkit browsers */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #1f2937;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #4b5563;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #6b7280;
 }

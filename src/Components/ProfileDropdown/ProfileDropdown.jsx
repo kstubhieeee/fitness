@@ -1,11 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { LogOut, User, Settings } from 'lucide-react';
+import { useauthstore } from '../../Store/useauthstore';
 
 const ProfileDropdown = ({ username, userType }) => {
     const [isOpen, setIsOpen] = useState(false);
     const dropdownRef = useRef(null);
     const navigate = useNavigate();
+    const { logout } = useauthstore();
 
     useEffect(() => {
         const handleClickOutside = (event) => {
@@ -19,10 +21,9 @@ const ProfileDropdown = ({ username, userType }) => {
     }, []);
 
     const handleLogout = () => {
-        localStorage.removeItem('token');
-        localStorage.removeItem('userType');
-        localStorage.removeItem('username');
-        navigate('/login');
+        logout(); // This will clear localStorage and zustand state
+        setIsOpen(false); // Close dropdown
+        navigate('/login', { replace: true }); // Use replace to prevent back navigation
     };
 
     return (
@@ -46,14 +47,20 @@ const ProfileDropdown = ({ username, userType }) => {
                     </div>
                     
                     <button
-                        onClick={() => navigate(`/${userType}dashboard`)}
+                        onClick={() => {
+                            setIsOpen(false);
+                            navigate(`/${userType}dashboard`);
+                        }}
                         className="w-full text-left px-4 py-2 text-sm text-white hover:bg-gray-700 transition-colors duration-200"
                     >
                         Dashboard
                     </button>
                     
                     <button
-                        onClick={() => navigate('/settings')}
+                        onClick={() => {
+                            setIsOpen(false);
+                            navigate('/settings');
+                        }}
                         className="w-full text-left px-4 py-2 text-sm text-white hover:bg-gray-700 transition-colors duration-200 flex items-center"
                     >
                         <Settings size={16} className="mr-2" />
