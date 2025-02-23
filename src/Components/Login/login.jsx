@@ -42,7 +42,7 @@ const Login = () => {
                 toast.success('Successfully logged in!');
                 
                 if (formData.role === "member") {
-                    navigate("/memberdashboard");
+                    navigate("/planspage");
                 } else if (formData.role === "trainer") {
                     navigate("/trainerdashboard");
                 }

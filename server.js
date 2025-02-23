@@ -7,10 +7,18 @@ const dotenv = require("dotenv");
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
+const Razorpay = require('razorpay');
+const crypto = require('crypto');
 
 dotenv.config();
 
 const app = express();
+
+// Initialize Razorpay
+const razorpay = new Razorpay({
+    key_id: process.env.RAZORPAY_KEY_ID || 'rzp_test_ilZnoyJIDqrWYR',
+    key_secret: process.env.RAZORPAY_KEY_SECRET || 'mNh6LSxPXhLb7F6NZhGIw24L'
+});
 
 // Middleware
 app.use(cors());
@@ -69,10 +77,12 @@ const memberSchema = new mongoose.Schema({
         type: { type: String },
         startDate: { type: Date },
         endDate: { type: Date },
-        status: { type: String, default: "active" }
+        status: { type: String, default: "inactive" }
     },
     assignedTrainer: { type: mongoose.Schema.Types.ObjectId, ref: 'Trainer' }
 });
+
+const Member = mongoose.model("Member", memberSchema);
 
 const workoutPlanSchema = new mongoose.Schema({
     memberId: { type: mongoose.Schema.Types.ObjectId, ref: 'Member', required: true },
@@ -134,8 +144,6 @@ const trainerSchema = new mongoose.Schema({
     }]
 });
 
-const Member = mongoose.model("Member", memberSchema);
-const Trainer = mongoose.model("Trainer", trainerSchema);
 const WorkoutPlan = mongoose.model("WorkoutPlan", workoutPlanSchema);
 const DietPlan = mongoose.model("DietPlan", dietPlanSchema);
 
@@ -460,7 +468,10 @@ app.post("/api/members/signup", async (req, res) => {
             gender,
             emergencyContact,
             healthConditions,
-            userType: "member"
+            userType: "member",
+            membership: {
+                status: "inactive" // Initially set as inactive
+            }
         });
 
         const token = jwt.sign(
@@ -667,6 +678,65 @@ app.put("/api/events/:id", authMiddleware, async (req, res) => {
         res.json(event);
     } catch (error) {
         res.status(500).json({ message: "Error updating event" });
+    }
+});
+
+// Razorpay Routes
+app.post('/api/create-order', authMiddleware, async (req, res) => {
+    try {
+        const { amount, planName } = req.body;
+        const options = {
+            amount: amount,
+            currency: "INR",
+            receipt: "order_" + Date.now(),
+        };
+
+        const order = await razorpay.orders.create(options);
+        res.json(order);
+    } catch (error) {
+        console.error('Error creating order:', error);
+        res.status(500).json({ message: "Error creating order" });
+    }
+});
+
+app.post('/api/verify-payment', authMiddleware, async (req, res) => {
+    try {
+        const {
+            razorpay_payment_id,
+            razorpay_order_id,
+            razorpay_signature,
+            planName
+        } = req.body;
+
+        // Verify payment signature
+        const body = razorpay_order_id + "|" + razorpay_payment_id;
+        const expectedSignature = crypto
+            .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
+            .update(body.toString())
+            .digest("hex");
+
+        if (expectedSignature === razorpay_signature) {
+            // Update member's membership status
+            const member = await Member.findById(req.user.id);
+            if (!member) {
+                return res.status(404).json({ message: "Member not found" });
+            }
+
+            member.membership = {
+                type: planName,
+                startDate: new Date(),
+                endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
+                status: "active"
+            };
+
+            await member.save();
+            res.json({ message: "Payment verified and membership activated" });
+        } else {
+            res.status(400).json({ message: "Invalid signature" });
+        }
+    } catch (error) {
+        console.error('Error verifying payment:', error.message);
+        res.status(500).json({ message: "Error verifying payment", error: error.message });
     }
 });
 

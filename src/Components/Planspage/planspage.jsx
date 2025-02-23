@@ -1,14 +1,50 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Check, ArrowRight } from 'lucide-react';
+import ProfileDropdown from "../ProfileDropdown/ProfileDropdown";
+import toast from 'react-hot-toast';
 
 const Planspage = () => {
     const navigate = useNavigate();
+    const [loading, setLoading] = useState(false);
+    const [memberProfile, setMemberProfile] = useState(null);
     
+    useEffect(() => {
+        const token = localStorage.getItem('token');
+        if (!token) {
+            navigate('/login');
+            return;
+        }
+        
+        checkMembershipStatus();
+    }, [navigate]);
+
+    const checkMembershipStatus = async () => {
+        try {
+            const response = await fetch('http://localhost:5000/api/members/profile', {
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                }
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                setMemberProfile(data);
+                
+                // If member has an active plan, redirect to dashboard
+                if (data.membership && data.membership.status === 'active') {
+                    navigate('/memberdashboard');
+                }
+            }
+        } catch (error) {
+            console.error('Error checking membership:', error);
+        }
+    };
+
     const plans = [
         {
             name: "Basic Plan",
-            price: "$25",
+            price: 2500,
             features: [
                 "Access to gym equipment",
                 "Basic workout plans",
@@ -20,7 +56,7 @@ const Planspage = () => {
         },
         {
             name: "Premium Plan",
-            price: "$30",
+            price: 3000,
             features: [
                 "All Basic Plan features",
                 "3 trainer sessions/month",
@@ -32,7 +68,7 @@ const Planspage = () => {
         },
         {
             name: "Pro Plan",
-            price: "$45",
+            price: 4500,
             features: [
                 "All Premium Plan features",
                 "Unlimited trainer sessions",
@@ -44,9 +80,102 @@ const Planspage = () => {
         }
     ];
 
+    const handlePayment = async (plan) => {
+        try {
+            setLoading(true);
+            
+            // Load Razorpay script
+            const script = document.createElement('script');
+            script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+            document.body.appendChild(script);
+
+            script.onload = async () => {
+                try {
+                    // Create order on your backend
+                    const orderResponse = await fetch('http://localhost:5000/api/create-order', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${localStorage.getItem('token')}`
+                        },
+                        body: JSON.stringify({
+                            amount: plan.price * 100, // Convert to paise
+                            planName: plan.name
+                        })
+                    });
+
+                    const orderData = await orderResponse.json();
+
+                    const options = {
+                        key: 'rzp_test_ilZnoyJIDqrWYR',
+                        amount: plan.price * 100,
+                        currency: "INR",
+                        name: "Power Fit",
+                        description: `${plan.name} Subscription`,
+                        order_id: orderData.id,
+                        handler: async (response) => {
+                            try {
+                                // Verify payment on backend
+                                const verifyResponse = await fetch('http://localhost:5000/api/verify-payment', {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                                    },
+                                    body: JSON.stringify({
+                                        razorpay_payment_id: response.razorpay_payment_id,
+                                        razorpay_order_id: response.razorpay_order_id,
+                                        razorpay_signature: response.razorpay_signature,
+                                        planName: plan.name
+                                    })
+                                });
+
+                                if (verifyResponse.ok) {
+                                    toast.success('Payment successful! Welcome to Power Fit!');
+                                    navigate('/memberdashboard');
+                                } else {
+                                    toast.error('Payment verification failed');
+                                }
+                            } catch (error) {
+                                console.error('Payment verification error:', error);
+                                toast.error('Payment verification failed');
+                            }
+                        },
+                        prefill: {
+                            name: memberProfile?.username,
+                            email: memberProfile?.email
+                        },
+                        theme: {
+                            color: "#f97316"
+                        }
+                    };
+
+                    const razorpay = new window.Razorpay(options);
+                    razorpay.open();
+                } catch (error) {
+                    console.error('Error creating order:', error);
+                    toast.error('Failed to initiate payment');
+                }
+            };
+        } catch (error) {
+            console.error('Payment error:', error);
+            toast.error('Payment failed');
+        } finally {
+            setLoading(false);
+        }
+    };
+
     return (
         <div className="min-h-screen bg-gray-900 py-20 px-4">
             <div className="max-w-7xl mx-auto">
+                {/* Header with Profile Dropdown */}
+                <div className="absolute top-4 right-4">
+                    <ProfileDropdown 
+                        username={memberProfile?.username || localStorage.getItem('username')} 
+                        userType="member" 
+                    />
+                </div>
+
                 <div className="text-center mb-16">
                     <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">
                         Choose Your Perfect Plan
@@ -74,7 +203,7 @@ const Planspage = () => {
                             
                             <h3 className="text-2xl font-bold text-white mb-4">{plan.name}</h3>
                             <div className="text-4xl font-bold text-orange-500 mb-6">
-                                {plan.price}
+                                ₹{plan.price}
                                 <span className="text-gray-400 text-base">/month</span>
                             </div>
                             
@@ -88,24 +217,24 @@ const Planspage = () => {
                             </ul>
                             
                             <button
-                                onClick={() => navigate("/memberdashboard")}
-                                className="w-full bg-gradient-to-r from-orange-500 to-red-600 text-white rounded-lg py-3 px-4 font-semibold hover:from-orange-600 hover:to-red-700 transition-all duration-300 flex items-center justify-center group"
+                                onClick={() => handlePayment(plan)}
+                                disabled={loading}
+                                className="w-full bg-gradient-to-r from-orange-500 to-red-600 text-white rounded-lg py-3 px-4 font-semibold hover:from-orange-600 hover:to-red-700 transition-all duration-300 flex items-center justify-center group disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                                Get Started
-                                <ArrowRight className="ml-2 transform group-hover:translate-x-1 transition-transform duration-300" size={20} />
+                                {loading ? (
+                                    <div className="flex items-center">
+                                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                                        Processing...
+                                    </div>
+                                ) : (
+                                    <>
+                                        Get Started
+                                        <ArrowRight className="ml-2 transform group-hover:translate-x-1 transition-transform duration-300" size={20} />
+                                    </>
+                                )}
                             </button>
                         </div>
                     ))}
-                </div>
-
-                <div className="text-center">
-                    <button
-                        onClick={() => navigate("/memberdashboard")}
-                        className="text-orange-500 hover:text-orange-400 font-medium flex items-center justify-center mx-auto"
-                    >
-                        Go to Dashboard
-                        <ArrowRight className="ml-2" size={20} />
-                    </button>
                 </div>
             </div>
         </div>

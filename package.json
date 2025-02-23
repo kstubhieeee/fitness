@@ -1,5 +1,5 @@
 {
-  "name": "gaurav",
+  "name": "vbwimknzky.github",
   "version": "0.0.0",
   "private": true,
   "dependencies": {
@@ -25,13 +25,15 @@
     "react-scripts": "5.0.1",
     "number-counter": "1.0.3",
     "react-calendar": "5.1.0",
+    "react-hot-toast": "2.4.1",
     "@emailjs/browser": "3.12.1",
     "react-router-dom": "7.2.0",
-    "react-hot-toast": "2.4.1",
     "react-onclickoutside": "6.13.1",
     "@testing-library/react": "13.4.0",
     "@testing-library/jest-dom": "5.17.0",
-    "@testing-library/user-event": "13.5.0"
+    "@testing-library/user-event": "13.5.0",
+    "razorpay": "2.9.2",
+    "crypto": "1.0.1"
   },
   "scripts": {
     "start": "react-scripts start",
@@ -41,17 +43,5 @@
   },
   "devDependencies": {
     "react-scripts": "latest"
-  },
-  "browserslist": {
-    "production": [
-      ">0.2%",
-      "not dead",
-      "not op_mini all"
-    ],
-    "development": [
-      "last 1 chrome version",
-      "last 1 firefox version",
-      "last 1 safari version"
-    ]
   }
 }
