@@ -37,6 +37,7 @@ const Login = () => {
                 localStorage.setItem('token', data.token);
                 localStorage.setItem('userType', formData.role);
                 localStorage.setItem('username', data.username);
+                localStorage.setItem('userId', data._id);
                 
                 toast.success('Successfully logged in!');
                 

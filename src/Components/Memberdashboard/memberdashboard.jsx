@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from "react";
 import Calendar from 'react-calendar';
 import 'react-calendar/dist/Calendar.css';
-import { useauthstore } from "../../Store/useauthstore";
 import { useNavigate } from "react-router-dom";
-import { Star, MessageSquare, LogOut, Search, Edit2, Trash2, CheckCircle } from 'lucide-react';
+import { Star, MessageSquare, Search, Edit2, Trash2, CheckCircle } from 'lucide-react';
 import "./styles.css";
 import ProfileDropdown from "../ProfileDropdown/ProfileDropdown";
 import toast from 'react-hot-toast';
@@ -12,7 +11,6 @@ const MemberDashboard = () => {
     const [trainers, setTrainers] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedSpecialization, setSelectedSpecialization] = useState('all');
-    const { authuser } = useauthstore();
     const navigate = useNavigate();
     const [date, setDate] = useState(new Date());
     const [events, setEvents] = useState([]);
@@ -23,28 +21,48 @@ const MemberDashboard = () => {
     const [selectedTrainer, setSelectedTrainer] = useState(null);
     const [workoutPlan, setWorkoutPlan] = useState(null);
     const [dietPlan, setDietPlan] = useState(null);
+    const [memberProfile, setMemberProfile] = useState(null);
 
-    // Fetch trainers from the database
     useEffect(() => {
-        const fetchTrainers = async () => {
+        const token = localStorage.getItem('token');
+        if (!token) {
+            navigate('/login');
+            return;
+        }
+
+        const fetchData = async () => {
             try {
-                const response = await fetch('http://localhost:5000/api/trainers', {
-                    headers: {
-                        'Authorization': `Bearer ${localStorage.getItem('token')}`
-                    }
-                });
-                if (!response.ok) throw new Error('Failed to fetch trainers');
-                const data = await response.json();
-                setTrainers(data);
+                await Promise.all([
+                    fetchTrainers(),
+                    fetchMemberProfile(),
+                    fetchEvents()
+                ]);
                 setLoading(false);
             } catch (err) {
                 setError(err.message);
                 setLoading(false);
+                toast.error('Failed to load data');
             }
         };
-        fetchTrainers();
-        fetchMemberProfile();
-    }, []);
+
+        fetchData();
+    }, [navigate]);
+
+    const fetchTrainers = async () => {
+        try {
+            const response = await fetch('http://localhost:5000/api/trainers', {
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                }
+            });
+            if (!response.ok) throw new Error('Failed to fetch trainers');
+            const data = await response.json();
+            setTrainers(data);
+        } catch (error) {
+            console.error('Error fetching trainers:', error);
+            throw error;
+        }
+    };
 
     const fetchMemberProfile = async () => {
         try {
@@ -53,14 +71,24 @@ const MemberDashboard = () => {
                     'Authorization': `Bearer ${localStorage.getItem('token')}`
                 }
             });
+            
+            if (!response.ok) {
+                throw new Error('Failed to fetch member profile');
+            }
+            
             const data = await response.json();
+            setMemberProfile(data);
+            
             if (data.assignedTrainer) {
                 setSelectedTrainer(data.assignedTrainer);
-                fetchWorkoutPlan(data._id);
-                fetchDietPlan(data._id);
+                await Promise.all([
+                    fetchWorkoutPlan(data._id),
+                    fetchDietPlan(data._id)
+                ]);
             }
         } catch (error) {
             console.error('Error fetching profile:', error);
+            throw error;
         }
     };
 
@@ -71,12 +99,17 @@ const MemberDashboard = () => {
                     'Authorization': `Bearer ${localStorage.getItem('token')}`
                 }
             });
+            
             if (response.ok) {
                 const data = await response.json();
                 setWorkoutPlan(data);
+            } else if (response.status !== 404) {
+                // Only throw error if it's not a 404 (no plan found)
+                throw new Error('Failed to fetch workout plan');
             }
         } catch (error) {
             console.error('Error fetching workout plan:', error);
+            toast.error('Failed to load workout plan');
         }
     };
 
@@ -87,12 +120,17 @@ const MemberDashboard = () => {
                     'Authorization': `Bearer ${localStorage.getItem('token')}`
                 }
             });
+            
             if (response.ok) {
                 const data = await response.json();
                 setDietPlan(data);
+            } else if (response.status !== 404) {
+                // Only throw error if it's not a 404 (no plan found)
+                throw new Error('Failed to fetch diet plan');
             }
         } catch (error) {
             console.error('Error fetching diet plan:', error);
+            toast.error('Failed to load diet plan');
         }
     };
 
@@ -119,15 +157,6 @@ const MemberDashboard = () => {
         }
     };
 
-    useEffect(() => {
-        const token = localStorage.getItem('token');
-        if (!token) {
-            navigate('/login');
-            return;
-        }
-        fetchEvents();
-    }, [navigate]);
-
     const fetchEvents = async () => {
         try {
             const response = await fetch('http://localhost:5000/api/events', {
@@ -142,7 +171,8 @@ const MemberDashboard = () => {
                 date: new Date(event.date)
             })));
         } catch (err) {
-            setError(err.message);
+            console.error('Error fetching events:', err);
+            throw err;
         }
     };
 
@@ -232,19 +262,19 @@ const MemberDashboard = () => {
 
     return (
         <div className="min-h-screen bg-gray-900">
-            {/* Header */}
             <header className="bg-gray-800 shadow-lg">
                 <div className="max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8 flex justify-between items-center">
-                    <h1 className="text-3xl font-bold text-white">Welcome, {authuser}</h1>
+                    <h1 className="text-3xl font-bold text-white">
+                        Welcome, {memberProfile?.username || 'Member'}
+                    </h1>
                     <ProfileDropdown 
-                        username={localStorage.getItem('username')} 
+                        username={memberProfile?.username || localStorage.getItem('username')} 
                         userType="member" 
                     />
                 </div>
             </header>
 
             <main className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
-                {/* Search and Filter Section */}
                 <div className="mb-8 bg-gray-800 p-6 rounded-xl shadow-lg">
                     <div className="flex flex-col md:flex-row gap-4 items-center">
                         <div className="relative flex-1">
@@ -272,7 +302,6 @@ const MemberDashboard = () => {
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    {/* Trainers List */}
                     <div className="lg:col-span-2 space-y-6">
                         <h2 className="text-2xl font-bold text-white mb-6">Available Trainers</h2>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -326,9 +355,7 @@ const MemberDashboard = () => {
                         </div>
                     </div>
 
-                    {/* Right Sidebar */}
                     <div className="space-y-6">
-                        {/* Calendar Section */}
                         <div className="bg-gray-800 rounded-xl p-6 shadow-lg">
                             <h2 className="text-2xl font-bold text-white mb-6">Schedule</h2>
                             <Calendar
@@ -358,7 +385,6 @@ const MemberDashboard = () => {
                             </div>
                         </div>
 
-                        {/* Workout Plan Section */}
                         {selectedTrainer && workoutPlan && (
                             <div className="bg-gray-800 rounded-xl p-6 shadow-lg">
                                 <h2 className="text-2xl font-bold text-white mb-6">Workout Plan</h2>
@@ -384,7 +410,6 @@ const MemberDashboard = () => {
                             </div>
                         )}
 
-                        {/* Diet Plan Section */}
                         {selectedTrainer && dietPlan && (
                             <div className="bg-gray-800 rounded-xl p-6 shadow-lg">
                                 <h2 className="text-2xl font-bold text-white mb-6">Diet Plan</h2>

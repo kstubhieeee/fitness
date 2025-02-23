@@ -150,7 +150,7 @@ const Event = mongoose.model("Event", eventSchema);
 // Authentication Middleware
 const authMiddleware = (req, res, next) => {
     try {
-        const token = req.header('Authorization')?.split(' ')[1];
+        const token = req.header('Authorization')?.replace('Bearer ', '');
 
         if (!token) {
             return res.status(401).json({ message: 'Access denied. No token provided.' });
@@ -227,8 +227,7 @@ app.post("/api/workout-plans", authMiddleware, authorize("trainer"), async (req,
 app.get("/api/workout-plans/:memberId", authMiddleware, async (req, res) => {
     try {
         const workoutPlan = await WorkoutPlan.findOne({
-            memberId: req.params.memberId,
-            trainerId: req.user.id
+            memberId: req.params.memberId
         }).sort({ createdAt: -1 });
 
         if (!workoutPlan) {
@@ -291,8 +290,7 @@ app.post("/api/diet-plans", authMiddleware, authorize("trainer"), async (req, re
 app.get("/api/diet-plans/:memberId", authMiddleware, async (req, res) => {
     try {
         const dietPlan = await DietPlan.findOne({
-            memberId: req.params.memberId,
-            trainerId: req.user.id
+            memberId: req.params.memberId
         }).sort({ createdAt: -1 });
 
         if (!dietPlan) {
@@ -390,6 +388,7 @@ app.post("/api/users/login", async (req, res) => {
             token
         });
     } catch (error) {
+        console.error(error);
         res.status(500).json({ message: "Something went wrong" });
     }
 });
