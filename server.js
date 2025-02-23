@@ -74,6 +74,41 @@ const memberSchema = new mongoose.Schema({
     assignedTrainer: { type: mongoose.Schema.Types.ObjectId, ref: 'Trainer' }
 });
 
+const workoutPlanSchema = new mongoose.Schema({
+    memberId: { type: mongoose.Schema.Types.ObjectId, ref: 'Member', required: true },
+    trainerId: { type: mongoose.Schema.Types.ObjectId, ref: 'Trainer', required: true },
+    weeklyPlan: [{
+        day: { type: String, required: true },
+        exercises: [{
+            name: { type: String, required: true },
+            sets: { type: Number, required: true },
+            reps: { type: Number, required: true },
+            duration: { type: Number }, // in minutes
+            notes: { type: String }
+        }]
+    }],
+    createdAt: { type: Date, default: Date.now },
+    updatedAt: { type: Date, default: Date.now }
+});
+
+const dietPlanSchema = new mongoose.Schema({
+    memberId: { type: mongoose.Schema.Types.ObjectId, ref: 'Member', required: true },
+    trainerId: { type: mongoose.Schema.Types.ObjectId, ref: 'Trainer', required: true },
+    weeklyPlan: [{
+        day: { type: String, required: true },
+        meals: [{
+            type: { type: String, required: true }, // breakfast, lunch, dinner, snack
+            foods: [{
+                name: { type: String, required: true },
+                quantity: { type: String, required: true },
+                calories: { type: Number }
+            }]
+        }]
+    }],
+    createdAt: { type: Date, default: Date.now },
+    updatedAt: { type: Date, default: Date.now }
+});
+
 const trainerSchema = new mongoose.Schema({
     username: { type: String, required: true, unique: true },
     email: { type: String, required: true, unique: true },
@@ -101,6 +136,8 @@ const trainerSchema = new mongoose.Schema({
 
 const Member = mongoose.model("Member", memberSchema);
 const Trainer = mongoose.model("Trainer", trainerSchema);
+const WorkoutPlan = mongoose.model("WorkoutPlan", workoutPlanSchema);
+const DietPlan = mongoose.model("DietPlan", dietPlanSchema);
 
 const eventSchema = new mongoose.Schema({
     userId: { type: mongoose.Schema.Types.ObjectId, required: true },
@@ -138,6 +175,154 @@ const authorize = (...roles) => {
         next();
     };
 };
+
+// Trainer Selection Routes
+app.post("/api/members/select-trainer", authMiddleware, authorize("member"), async (req, res) => {
+    try {
+        const { trainerId } = req.body;
+        const memberId = req.user.id;
+
+        const member = await Member.findById(memberId);
+        const trainer = await Trainer.findById(trainerId);
+
+        if (!member || !trainer) {
+            return res.status(404).json({ message: "Member or trainer not found" });
+        }
+
+        // Update member's assigned trainer
+        member.assignedTrainer = trainerId;
+        await member.save();
+
+        // Add member to trainer's clients list
+        if (!trainer.clients.includes(memberId)) {
+            trainer.clients.push(memberId);
+            await trainer.save();
+        }
+
+        res.json({ message: "Trainer assigned successfully" });
+    } catch (error) {
+        res.status(500).json({ message: "Error assigning trainer" });
+    }
+});
+
+// Workout Plan Routes
+app.post("/api/workout-plans", authMiddleware, authorize("trainer"), async (req, res) => {
+    try {
+        const { memberId, weeklyPlan } = req.body;
+        const trainerId = req.user.id;
+
+        const workoutPlan = new WorkoutPlan({
+            memberId,
+            trainerId,
+            weeklyPlan
+        });
+
+        await workoutPlan.save();
+        res.status(201).json(workoutPlan);
+    } catch (error) {
+        res.status(500).json({ message: "Error creating workout plan" });
+    }
+});
+
+app.get("/api/workout-plans/:memberId", authMiddleware, async (req, res) => {
+    try {
+        const workoutPlan = await WorkoutPlan.findOne({
+            memberId: req.params.memberId,
+            trainerId: req.user.id
+        }).sort({ createdAt: -1 });
+
+        if (!workoutPlan) {
+            return res.status(404).json({ message: "Workout plan not found" });
+        }
+
+        res.json(workoutPlan);
+    } catch (error) {
+        res.status(500).json({ message: "Error fetching workout plan" });
+    }
+});
+
+app.put("/api/workout-plans/:id", authMiddleware, authorize("trainer"), async (req, res) => {
+    try {
+        const { weeklyPlan } = req.body;
+        const workoutPlan = await WorkoutPlan.findOneAndUpdate(
+            { _id: req.params.id, trainerId: req.user.id },
+            { weeklyPlan, updatedAt: Date.now() },
+            { new: true }
+        );
+
+        if (!workoutPlan) {
+            return res.status(404).json({ message: "Workout plan not found" });
+        }
+
+        res.json(workoutPlan);
+    } catch (error) {
+        res.status(500).json({ message: "Error updating workout plan" });
+    }
+});
+
+app.get("/api/workout-plans", authMiddleware, async (req, res) => {
+    try {
+        const workoutPlans = await WorkoutPlan.find({ trainerId: req.user.id });
+        res.json(workoutPlans);
+    } catch (error) {
+        res.status(500).json({ message: "Error fetching workout plans" });
+    }
+});
+
+// Diet Plan Routes
+app.post("/api/diet-plans", authMiddleware, authorize("trainer"), async (req, res) => {
+    try {
+        const { memberId, weeklyPlan } = req.body;
+        const trainerId = req.user.id;
+
+        const dietPlan = new DietPlan({
+            memberId,
+            trainerId,
+            weeklyPlan
+        });
+
+        await dietPlan.save();
+        res.status(201).json(dietPlan);
+    } catch (error) {
+        res.status(500).json({ message: "Error creating diet plan" });
+    }
+});
+
+app.get("/api/diet-plans/:memberId", authMiddleware, async (req, res) => {
+    try {
+        const dietPlan = await DietPlan.findOne({
+            memberId: req.params.memberId,
+            trainerId: req.user.id
+        }).sort({ createdAt: -1 });
+
+        if (!dietPlan) {
+            return res.status(404).json({ message: "Diet plan not found" });
+        }
+
+        res.json(dietPlan);
+    } catch (error) {
+        res.status(500).json({ message: "Error fetching diet plan" });
+    }
+});
+
+app.put("/api/diet-plans/:id", authMiddleware, authorize("trainer"), async (req, res) => {
+    try {
+        const { weeklyPlan } = req.body;
+        const dietPlan = await DietPlan.findOneAndUpdate(
+            { _id: req.params.id, trainerId: req.user.id },
+            { weeklyPlan, updatedAt: Date.now() },
+            { new: true }
+        );
+
+        if (!dietPlan) {
+            return res.status(404).json({ message: "Diet plan not found" });
+        }
+
+        res.json(dietPlan);
+    } catch (error) {
+        res.status(500).json({ message: "Error updating diet plan" });
+    }
+});
 
 // Public Routes
 app.post("/api/users/signup", async (req, res) => {
@@ -366,7 +551,8 @@ app.post("/api/trainers/signup", upload.single('photo'), async (req, res) => {
 
 app.get("/api/trainer/members", authMiddleware, authorize("trainer"), async (req, res) => {
     try {
-        const members = await Member.find().select('-password');
+        const trainer = await Trainer.findById(req.user.id);
+        const members = await Member.find({ _id: { $in: trainer.clients } }).select('-password');
         res.json(members);
     } catch (err) {
         console.error(err);

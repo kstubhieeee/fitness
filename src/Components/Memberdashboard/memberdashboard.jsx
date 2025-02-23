@@ -3,9 +3,11 @@ import Calendar from 'react-calendar';
 import 'react-calendar/dist/Calendar.css';
 import { useauthstore } from "../../Store/useauthstore";
 import { useNavigate } from "react-router-dom";
-import { Star, MessageSquare, LogOut, Search, Edit2, Trash2 } from 'lucide-react';
-import "./styles.css"
-import ProfileDropdown from "../ProfileDropdown/ProfileDropdown"
+import { Star, MessageSquare, LogOut, Search, Edit2, Trash2, CheckCircle } from 'lucide-react';
+import "./styles.css";
+import ProfileDropdown from "../ProfileDropdown/ProfileDropdown";
+import toast from 'react-hot-toast';
+
 const MemberDashboard = () => {
     const [trainers, setTrainers] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
@@ -18,6 +20,9 @@ const MemberDashboard = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [editingEvent, setEditingEvent] = useState(null);
+    const [selectedTrainer, setSelectedTrainer] = useState(null);
+    const [workoutPlan, setWorkoutPlan] = useState(null);
+    const [dietPlan, setDietPlan] = useState(null);
 
     // Fetch trainers from the database
     useEffect(() => {
@@ -38,7 +43,81 @@ const MemberDashboard = () => {
             }
         };
         fetchTrainers();
+        fetchMemberProfile();
     }, []);
+
+    const fetchMemberProfile = async () => {
+        try {
+            const response = await fetch('http://localhost:5000/api/members/profile', {
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                }
+            });
+            const data = await response.json();
+            if (data.assignedTrainer) {
+                setSelectedTrainer(data.assignedTrainer);
+                fetchWorkoutPlan(data._id);
+                fetchDietPlan(data._id);
+            }
+        } catch (error) {
+            console.error('Error fetching profile:', error);
+        }
+    };
+
+    const fetchWorkoutPlan = async (memberId) => {
+        try {
+            const response = await fetch(`http://localhost:5000/api/workout-plans/${memberId}`, {
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                }
+            });
+            if (response.ok) {
+                const data = await response.json();
+                setWorkoutPlan(data);
+            }
+        } catch (error) {
+            console.error('Error fetching workout plan:', error);
+        }
+    };
+
+    const fetchDietPlan = async (memberId) => {
+        try {
+            const response = await fetch(`http://localhost:5000/api/diet-plans/${memberId}`, {
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                }
+            });
+            if (response.ok) {
+                const data = await response.json();
+                setDietPlan(data);
+            }
+        } catch (error) {
+            console.error('Error fetching diet plan:', error);
+        }
+    };
+
+    const handleSelectTrainer = async (trainer) => {
+        try {
+            const response = await fetch('http://localhost:5000/api/members/select-trainer', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                },
+                body: JSON.stringify({ trainerId: trainer._id })
+            });
+
+            if (response.ok) {
+                setSelectedTrainer(trainer);
+                toast.success('Trainer selected successfully!');
+            } else {
+                toast.error('Failed to select trainer');
+            }
+        } catch (error) {
+            console.error('Error selecting trainer:', error);
+            toast.error('Error selecting trainer');
+        }
+    };
 
     useEffect(() => {
         const token = localStorage.getItem('token');
@@ -158,10 +237,9 @@ const MemberDashboard = () => {
                 <div className="max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8 flex justify-between items-center">
                     <h1 className="text-3xl font-bold text-white">Welcome, {authuser}</h1>
                     <ProfileDropdown 
-    username={localStorage.getItem('username')} 
-    userType="member" 
-/>
-
+                        username={localStorage.getItem('username')} 
+                        userType="member" 
+                    />
                 </div>
             </header>
 
@@ -220,9 +298,22 @@ const MemberDashboard = () => {
                                             <p className="text-gray-400 mt-2">{trainer.experience} years experience</p>
                                             <p className="text-white font-semibold mt-2">${trainer.feePerMonth}/month</p>
                                             <div className="mt-4 flex space-x-3">
-                                                <button className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors duration-200">
-                                                    Book Session
-                                                </button>
+                                                {selectedTrainer?._id === trainer._id ? (
+                                                    <button 
+                                                        className="bg-green-500 text-white px-4 py-2 rounded-lg flex items-center gap-2"
+                                                        disabled
+                                                    >
+                                                        <CheckCircle size={16} />
+                                                        Selected
+                                                    </button>
+                                                ) : (
+                                                    <button 
+                                                        onClick={() => handleSelectTrainer(trainer)}
+                                                        className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors duration-200"
+                                                    >
+                                                        Select Trainer
+                                                    </button>
+                                                )}
                                                 <button className="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors duration-200">
                                                     <MessageSquare size={16} />
                                                     Message
@@ -235,74 +326,88 @@ const MemberDashboard = () => {
                         </div>
                     </div>
 
-                    {/* Calendar Section */}
-                    <div className="bg-gray-800 rounded-xl p-6 shadow-lg">
-                        <h2 className="text-2xl font-bold text-white mb-6">Schedule</h2>
-                        <Calendar
-                            onChange={setDate}
-                            value={date}
-                            className="bg-gray-700 border-0 rounded-lg shadow-lg p-4 w-full"
-                            tileClassName={({ date }) =>
-                                events.some(event => event.date.toDateString() === date.toDateString())
-                                    ? 'bg-orange-500 text-white rounded-full'
-                                    : null
-                            }
-                        />
-                        <div className="mt-6 space-y-4">
-                            <input
-                                type="text"
-                                value={newEvent}
-                                onChange={(e) => setNewEvent(e.target.value)}
-                                placeholder="Add new event..."
-                                className="w-full px-4 py-2 bg-gray-700 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    {/* Right Sidebar */}
+                    <div className="space-y-6">
+                        {/* Calendar Section */}
+                        <div className="bg-gray-800 rounded-xl p-6 shadow-lg">
+                            <h2 className="text-2xl font-bold text-white mb-6">Schedule</h2>
+                            <Calendar
+                                onChange={setDate}
+                                value={date}
+                                className="bg-gray-700 border-0 rounded-lg shadow-lg p-4 w-full"
+                                tileClassName={({ date }) =>
+                                    events.some(event => event.date.toDateString() === date.toDateString())
+                                        ? 'bg-orange-500 text-white rounded-full'
+                                        : null
+                                }
                             />
-                            <button
-                                onClick={editingEvent ? () => handleEditEvent(events.find(e => e._id === editingEvent)) : handleAddEvent}
-                                className="w-full bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg transition-colors duration-200"
-                            >
-                                {editingEvent ? 'Update Event' : 'Add Event'}
-                            </button>
-                            {editingEvent && (
+                            <div className="mt-6 space-y-4">
+                                <input
+                                    type="text"
+                                    value={newEvent}
+                                    onChange={(e) => setNewEvent(e.target.value)}
+                                    placeholder="Add new event..."
+                                    className="w-full px-4 py-2 bg-gray-700 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                                />
                                 <button
-                                    onClick={() => {
-                                        setEditingEvent(null);
-                                        setNewEvent("");
-                                    }}
-                                    className="w-full bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-lg transition-colors duration-200"
+                                    onClick={editingEvent ? () => handleEditEvent(events.find(e => e._id === editingEvent)) : handleAddEvent}
+                                    className="w-full bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg transition-colors duration-200"
                                 >
-                                    Cancel Edit
+                                    {editingEvent ? 'Update Event' : 'Add Event'}
                                 </button>
-                            )}
+                            </div>
                         </div>
-                        {events.length > 0 && (
-                            <div className="mt-6">
-                                <h3 className="text-lg font-semibold text-white mb-4">Upcoming Events</h3>
-                                <div className="space-y-3">
-                                    {events.map((event) => (
-                                        <div key={event._id} className="bg-gray-700 rounded-lg p-3">
-                                            <div className="flex justify-between items-start">
-                                                <div>
-                                                    <p className="text-white font-medium">{event.title}</p>
-                                                    <p className="text-gray-400 text-sm">{event.date.toDateString()}</p>
+
+                        {/* Workout Plan Section */}
+                        {selectedTrainer && workoutPlan && (
+                            <div className="bg-gray-800 rounded-xl p-6 shadow-lg">
+                                <h2 className="text-2xl font-bold text-white mb-6">Workout Plan</h2>
+                                {workoutPlan.weeklyPlan.map((day, index) => (
+                                    <div key={index} className="mb-4">
+                                        <h3 className="text-lg font-semibold text-orange-500 mb-2">{day.day}</h3>
+                                        <div className="space-y-2">
+                                            {day.exercises.map((exercise, i) => (
+                                                <div key={i} className="bg-gray-700 p-3 rounded-lg">
+                                                    <p className="text-white font-medium">{exercise.name}</p>
+                                                    <p className="text-gray-400">
+                                                        {exercise.sets} sets × {exercise.reps} reps
+                                                        {exercise.duration && ` • ${exercise.duration} mins`}
+                                                    </p>
+                                                    {exercise.notes && (
+                                                        <p className="text-gray-400 text-sm mt-1">{exercise.notes}</p>
+                                                    )}
                                                 </div>
-                                                <div className="flex space-x-2">
-                                                    <button
-                                                        onClick={() => handleEditEvent(event)}
-                                                        className="text-blue-400 hover:text-blue-300 transition-colors duration-200"
-                                                    >
-                                                        <Edit2 size={16} />
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleDeleteEvent(event._id)}
-                                                        className="text-red-400 hover:text-red-300 transition-colors duration-200"
-                                                    >
-                                                        <Trash2 size={16} />
-                                                    </button>
-                                                </div>
-                                            </div>
+                                            ))}
                                         </div>
-                                    ))}
-                                </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+
+                        {/* Diet Plan Section */}
+                        {selectedTrainer && dietPlan && (
+                            <div className="bg-gray-800 rounded-xl p-6 shadow-lg">
+                                <h2 className="text-2xl font-bold text-white mb-6">Diet Plan</h2>
+                                {dietPlan.weeklyPlan.map((day, index) => (
+                                    <div key={index} className="mb-4">
+                                        <h3 className="text-lg font-semibold text-orange-500 mb-2">{day.day}</h3>
+                                        <div className="space-y-2">
+                                            {day.meals.map((meal, i) => (
+                                                <div key={i} className="bg-gray-700 p-3 rounded-lg">
+                                                    <p className="text-white font-medium capitalize">{meal.type}</p>
+                                                    <div className="space-y-1 mt-2">
+                                                        {meal.foods.map((food, j) => (
+                                                            <div key={j} className="flex justify-between text-gray-400">
+                                                                <span>{food.name}</span>
+                                                                <span>{food.quantity}</span>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                ))}
                             </div>
                         )}
                     </div>
