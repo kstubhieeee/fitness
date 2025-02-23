@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Save, ArrowLeft, Upload } from 'lucide-react';
+import { Save, ArrowLeft } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const TrainerSettings = () => {
@@ -17,8 +17,6 @@ const TrainerSettings = () => {
         feePerMonth: '',
         availability: ''
     });
-    const [photo, setPhoto] = useState(null);
-    const [photoPreview, setPhotoPreview] = useState(null);
     const [loading, setLoading] = useState(true);
     const navigate = useNavigate();
 
@@ -37,7 +35,6 @@ const TrainerSettings = () => {
             if (response.ok) {
                 const data = await response.json();
                 setProfile(data);
-                setPhotoPreview(data.photo);
             }
         } catch (error) {
             console.error('Error fetching profile:', error);
@@ -55,33 +52,18 @@ const TrainerSettings = () => {
         }));
     };
 
-    const handlePhotoChange = (e) => {
-        const file = e.target.files[0];
-        if (file) {
-            setPhoto(file);
-            setPhotoPreview(URL.createObjectURL(file));
-        }
-    };
-
     const handleSubmit = async (e) => {
         e.preventDefault();
         setLoading(true);
 
         try {
-            const formData = new FormData();
-            Object.keys(profile).forEach(key => {
-                formData.append(key, profile[key]);
-            });
-            if (photo) {
-                formData.append('photo', photo);
-            }
-
             const response = await fetch('http://localhost:5000/api/trainers/profile', {
                 method: 'PUT',
                 headers: {
+                    'Content-Type': 'application/json',
                     'Authorization': `Bearer ${localStorage.getItem('token')}`
                 },
-                body: formData
+                body: JSON.stringify(profile)
             });
 
             if (response.ok) {
@@ -119,37 +101,6 @@ const TrainerSettings = () => {
                 </div>
 
                 <form onSubmit={handleSubmit} className="bg-gray-800 rounded-xl p-6 shadow-xl">
-                    <div className="mb-6">
-                        <div className="flex items-center space-x-6">
-                            {photoPreview && (
-                                <img
-                                    src={photoPreview}
-                                    alt="Profile"
-                                    className="w-32 h-32 rounded-full object-cover"
-                                />
-                            )}
-                            <div>
-                                <label className="block text-sm font-medium text-gray-300 mb-2">
-                                    Profile Photo
-                                </label>
-                                <input
-                                    type="file"
-                                    accept="image/*"
-                                    onChange={handlePhotoChange}
-                                    className="hidden"
-                                    id="photo-upload"
-                                />
-                                <label
-                                    htmlFor="photo-upload"
-                                    className="flex items-center gap-2 px-4 py-2 bg-gray-700 text-white rounded-lg cursor-pointer hover:bg-gray-600 transition-colors duration-200"
-                                >
-                                    <Upload size={20} />
-                                    <span>Upload New Photo</span>
-                                </label>
-                            </div>
-                        </div>
-                    </div>
-
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
                             <label className="block text-sm font-medium text-gray-300 mb-2">
@@ -260,7 +211,7 @@ const TrainerSettings = () => {
 
                         <div>
                             <label className="block text-sm font-medium text-gray-300 mb-2">
-                                Monthly Fee ($)
+                                Monthly Fee (₹)
                             </label>
                             <input
                                 type="number"
@@ -281,7 +232,7 @@ const TrainerSettings = () => {
                                 onChange={handleChange}
                                 rows="3"
                                 className="w-full bg-gray-700 text-white rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-orange-500"
-                            ></textarea>
+                            />
                         </div>
 
                         <div className="md:col-span-2">
@@ -294,7 +245,8 @@ const TrainerSettings = () => {
                                 onChange={handleChange}
                                 rows="3"
                                 className="w-full bg-gray-700 text-white rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-orange-500"
-                            ></textarea>
+                                placeholder="e.g., Monday-Friday: 9 AM - 6 PM, Saturday: 10 AM - 2 PM"
+                            />
                         </div>
                     </div>
 

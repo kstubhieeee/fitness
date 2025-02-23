@@ -668,6 +668,21 @@ app.put("/api/trainers/profile", authMiddleware, authorize("trainer"), upload.si
     }
 });
 
+// Protected Trainer Profile Routes
+app.get("/api/trainers/profile", authMiddleware, authorize("trainer"), async (req, res) => {
+    try {
+        const trainer = await Trainer.findById(req.user.id).select('-password');
+        
+        if (!trainer) {
+            return res.status(404).json({ message: 'Trainer not found' });
+        }
+        res.json(trainer);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: 'Server Error' });
+    }
+});
+
 // Event Routes
 app.post("/api/events", authMiddleware, async (req, res) => {
     try {
