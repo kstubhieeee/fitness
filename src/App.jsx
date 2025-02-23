@@ -9,6 +9,8 @@ import TrainerSignup from './Components/Signup/TrainerSignup';
 import Planspage from './Components/Planspage/planspage';
 import ProtectedRoute from './Components/ProtectedRoute/ProtectedRoute';
 import { Toaster } from 'react-hot-toast';
+import MemberSettings from './Components/Settings/MemberSettings';
+import TrainerSettings from './Components/Settings/TrainerSettings';
 
 function App() {
   const isAuthenticated = localStorage.getItem('token');
@@ -90,6 +92,24 @@ function App() {
           element={
             <ProtectedRoute allowedUserType="member">
               <Planspage />
+            </ProtectedRoute>
+          } 
+        />
+
+        <Route 
+          path="/member-settings" 
+          element={
+            <ProtectedRoute allowedUserType="member">
+              <MemberSettings />
+            </ProtectedRoute>
+          } 
+        />
+
+        <Route 
+          path="/trainer-settings" 
+          element={
+            <ProtectedRoute allowedUserType="trainer">
+              <TrainerSettings />
             </ProtectedRoute>
           } 
         />

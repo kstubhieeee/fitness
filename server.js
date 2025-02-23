@@ -600,35 +600,67 @@ app.get("/api/members/profile", authMiddleware, authorize("member"), async (req,
     }
 });
 
+// Update Member Profile Route
 app.put("/api/members/profile", authMiddleware, authorize("member"), async (req, res) => {
     try {
-        const member = await Member.findById(req.user.id);
+        const updates = {
+            username: req.body.username,
+            email: req.body.email,
+            phone: req.body.phone,
+            age: req.body.age,
+            gender: req.body.gender,
+            emergencyContact: req.body.emergencyContact,
+            healthConditions: req.body.healthConditions
+        };
+
+        const member = await Member.findByIdAndUpdate(
+            req.user.id,
+            { $set: updates },
+            { new: true, runValidators: true }
+        ).select('-password');
+
         if (!member) {
             return res.status(404).json({ message: 'Member not found' });
         }
 
-        const updatedMember = await Member.findByIdAndUpdate(
-            req.user.id,
-            { $set: req.body },
-            { new: true }
-        ).select('-password');
-
-        res.json(updatedMember);
+        res.json(member);
     } catch (err) {
         console.error(err);
         res.status(500).json({ message: 'Server Error' });
     }
 });
 
-app.get("/api/trainers/profile", authMiddleware, async (req, res) => {
+// Update Trainer Profile Route
+app.put("/api/trainers/profile", authMiddleware, authorize("trainer"), upload.single('photo'), async (req, res) => {
     try {
-        const trainer = await Trainer.findById(req.user.id)
-            .select('-password')
-            .populate('clients', 'username email');
-        
+        const updates = {
+            username: req.body.username,
+            email: req.body.email,
+            fullName: req.body.fullName,
+            phone: req.body.phone,
+            age: req.body.age,
+            gender: req.body.gender,
+            specialization: req.body.specialization,
+            experience: req.body.experience,
+            certification: req.body.certification,
+            feePerMonth: req.body.feePerMonth,
+            availability: req.body.availability
+        };
+
+        if (req.file) {
+            updates.photo = `/trainer/photos/${req.file.filename}`;
+        }
+
+        const trainer = await Trainer.findByIdAndUpdate(
+            req.user.id,
+            { $set: updates },
+            { new: true, runValidators: true }
+        ).select('-password');
+
         if (!trainer) {
             return res.status(404).json({ message: 'Trainer not found' });
         }
+
         res.json(trainer);
     } catch (err) {
         console.error(err);
