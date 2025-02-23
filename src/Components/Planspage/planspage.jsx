@@ -5,9 +5,9 @@ import ProfileDropdown from "../ProfileDropdown/ProfileDropdown";
 import toast from 'react-hot-toast';
 
 const Planspage = () => {
-    const navigate = useNavigate();
     const [loading, setLoading] = useState(false);
     const [memberProfile, setMemberProfile] = useState(null);
+    const navigate = useNavigate();
     
     useEffect(() => {
         const token = localStorage.getItem('token');
@@ -31,7 +31,6 @@ const Planspage = () => {
                 const data = await response.json();
                 setMemberProfile(data);
                 
-                // If member has an active plan, redirect to dashboard
                 if (data.membership && data.membership.status === 'active') {
                     navigate('/memberdashboard');
                 }
@@ -84,79 +83,78 @@ const Planspage = () => {
         try {
             setLoading(true);
             
-            // Load Razorpay script
+            // Create order
+            const orderResponse = await fetch('http://localhost:5000/api/create-order', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                },
+                body: JSON.stringify({
+                    amount: plan.price * 100, // Convert to paise
+                    planName: plan.name
+                })
+            });
+
+            if (!orderResponse.ok) {
+                throw new Error('Failed to create order');
+            }
+
+            const orderData = await orderResponse.json();
+
+            // Load Razorpay
             const script = document.createElement('script');
             script.src = 'https://checkout.razorpay.com/v1/checkout.js';
             document.body.appendChild(script);
 
-            script.onload = async () => {
-                try {
-                    // Create order on your backend
-                    const orderResponse = await fetch('http://localhost:5000/api/create-order', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${localStorage.getItem('token')}`
-                        },
-                        body: JSON.stringify({
-                            amount: plan.price * 100, // Convert to paise
-                            planName: plan.name
-                        })
-                    });
+            script.onload = () => {
+                const options = {
+                    key: 'rzp_test_ilZnoyJIDqrWYR',
+                    amount: plan.price * 100,
+                    currency: "INR",
+                    name: "Power Fit",
+                    description: `${plan.name} Subscription`,
+                    order_id: orderData.id,
+                    handler: async function(response) {
+                        try {
+                            const verifyResponse = await fetch('http://localhost:5000/api/verify-payment', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                                },
+                                body: JSON.stringify({
+                                    razorpay_payment_id: response.razorpay_payment_id,
+                                    razorpay_order_id: response.razorpay_order_id,
+                                    razorpay_signature: response.razorpay_signature,
+                                    planName: plan.name
+                                })
+                            });
 
-                    const orderData = await orderResponse.json();
-
-                    const options = {
-                        key: 'rzp_test_ilZnoyJIDqrWYR',
-                        amount: plan.price * 100,
-                        currency: "INR",
-                        name: "Power Fit",
-                        description: `${plan.name} Subscription`,
-                        order_id: orderData.id,
-                        handler: async (response) => {
-                            try {
-                                // Verify payment on backend
-                                const verifyResponse = await fetch('http://localhost:5000/api/verify-payment', {
-                                    method: 'POST',
-                                    headers: {
-                                        'Content-Type': 'application/json',
-                                        'Authorization': `Bearer ${localStorage.getItem('token')}`
-                                    },
-                                    body: JSON.stringify({
-                                        razorpay_payment_id: response.razorpay_payment_id,
-                                        razorpay_order_id: response.razorpay_order_id,
-                                        razorpay_signature: response.razorpay_signature,
-                                        planName: plan.name
-                                    })
-                                });
-
-                                if (verifyResponse.ok) {
-                                    toast.success('Payment successful! Welcome to Power Fit!');
-                                    navigate('/memberdashboard');
-                                } else {
-                                    toast.error('Payment verification failed');
-                                }
-                            } catch (error) {
-                                console.error('Payment verification error:', error);
-                                toast.error('Payment verification failed');
+                            if (verifyResponse.ok) {
+                                toast.success('Payment successful! Welcome to Power Fit!');
+                                navigate('/memberdashboard');
+                            } else {
+                                throw new Error('Payment verification failed');
                             }
-                        },
-                        prefill: {
-                            name: memberProfile?.username,
-                            email: memberProfile?.email
-                        },
-                        theme: {
-                            color: "#f97316"
+                        } catch (error) {
+                            console.error('Payment verification error:', error);
+                            toast.error('Payment verification failed');
                         }
-                    };
+                    },
+                    prefill: {
+                        name: memberProfile?.username || '',
+                        email: memberProfile?.email || ''
+                    },
+                    theme: {
+                        color: "#f97316"
+                    }
+                };
 
-                    const razorpay = new window.Razorpay(options);
-                    razorpay.open();
-                } catch (error) {
-                    console.error('Error creating order:', error);
-                    toast.error('Failed to initiate payment');
-                }
+                const razorpayInstance = new window.Razorpay(options);
+                razorpayInstance.open();
             };
+
         } catch (error) {
             console.error('Payment error:', error);
             toast.error('Payment failed');
@@ -168,7 +166,6 @@ const Planspage = () => {
     return (
         <div className="min-h-screen bg-gray-900 py-20 px-4">
             <div className="max-w-7xl mx-auto">
-                {/* Header with Profile Dropdown */}
                 <div className="absolute top-4 right-4">
                     <ProfileDropdown 
                         username={memberProfile?.username || localStorage.getItem('username')} 

@@ -155,6 +155,9 @@ const eventSchema = new mongoose.Schema({
 
 const Event = mongoose.model("Event", eventSchema);
 
+// Add the Trainer model
+const Trainer = mongoose.model("Trainer", trainerSchema);
+
 // Authentication Middleware
 const authMiddleware = (req, res, next) => {
     try {
@@ -684,7 +687,8 @@ app.put("/api/events/:id", authMiddleware, async (req, res) => {
 // Razorpay Routes
 app.post('/api/create-order', authMiddleware, async (req, res) => {
     try {
-        const { amount, planName } = req.body;
+        const { amount } = req.body;
+        
         const options = {
             amount: amount,
             currency: "INR",
@@ -711,11 +715,13 @@ app.post('/api/verify-payment', authMiddleware, async (req, res) => {
         // Verify payment signature
         const body = razorpay_order_id + "|" + razorpay_payment_id;
         const expectedSignature = crypto
-            .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
+            .createHmac("sha256", razorpay.key_secret)
             .update(body.toString())
             .digest("hex");
 
-        if (expectedSignature === razorpay_signature) {
+        const isAuthentic = expectedSignature === razorpay_signature;
+
+        if (isAuthentic) {
             // Update member's membership status
             const member = await Member.findById(req.user.id);
             if (!member) {
@@ -735,8 +741,8 @@ app.post('/api/verify-payment', authMiddleware, async (req, res) => {
             res.status(400).json({ message: "Invalid signature" });
         }
     } catch (error) {
-        console.error('Error verifying payment:', error.message);
-        res.status(500).json({ message: "Error verifying payment", error: error.message });
+        console.error('Error verifying payment:', error);
+        res.status(500).json({ message: "Error verifying payment" });
     }
 });
 
