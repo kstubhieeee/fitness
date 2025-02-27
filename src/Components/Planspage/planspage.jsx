@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Check, ArrowRight } from 'lucide-react';
+import { Check, ArrowRight, Tag } from 'lucide-react';
 import ProfileDropdown from "../ProfileDropdown/ProfileDropdown";
 import toast from 'react-hot-toast';
 
 const Planspage = () => {
     const [loading, setLoading] = useState(false);
     const [memberProfile, setMemberProfile] = useState(null);
+    const [couponCode, setCouponCode] = useState('');
+    const [appliedCoupon, setAppliedCoupon] = useState(null);
+    const [showCouponInput, setShowCouponInput] = useState(false);
     const navigate = useNavigate();
     
     useEffect(() => {
@@ -79,9 +82,44 @@ const Planspage = () => {
         }
     ];
 
+    // Sample coupons (in a real app, these would be fetched from the server)
+    const availableCoupons = [
+        { code: 'SUMMER25', discount: 25, expiryDate: '2025-08-31', isActive: true },
+        { code: 'WELCOME10', discount: 10, expiryDate: '2025-12-31', isActive: true },
+        { code: 'FLASH50', discount: 50, expiryDate: '2025-06-30', isActive: true }
+    ];
+
+    const handleApplyCoupon = () => {
+        if (!couponCode.trim()) {
+            toast.error('Please enter a coupon code');
+            return;
+        }
+
+        const coupon = availableCoupons.find(
+            c => c.code.toLowerCase() === couponCode.toLowerCase() && c.isActive
+        );
+
+        if (coupon) {
+            setAppliedCoupon(coupon);
+            toast.success(`Coupon applied! ${coupon.discount}% discount`);
+            setShowCouponInput(false);
+        } else {
+            toast.error('Invalid or expired coupon code');
+        }
+    };
+
+    const calculateDiscountedPrice = (originalPrice) => {
+        if (!appliedCoupon) return originalPrice;
+        
+        const discountAmount = (originalPrice * appliedCoupon.discount) / 100;
+        return originalPrice - discountAmount;
+    };
+
     const handlePayment = async (plan) => {
         try {
             setLoading(true);
+            
+            const finalPrice = calculateDiscountedPrice(plan.price);
             
             // Create order
             const orderResponse = await fetch('http://localhost:5000/api/create-order', {
@@ -91,7 +129,7 @@ const Planspage = () => {
                     'Authorization': `Bearer ${localStorage.getItem('token')}`
                 },
                 body: JSON.stringify({
-                    amount: plan.price * 100, // Convert to paise
+                    amount: finalPrice * 100, // Convert to paise
                     planName: plan.name
                 })
             });
@@ -110,7 +148,7 @@ const Planspage = () => {
             script.onload = () => {
                 const options = {
                     key: 'rzp_test_ilZnoyJIDqrWYR',
-                    amount: plan.price * 100,
+                    amount: finalPrice * 100,
                     currency: "INR",
                     name: "Power Fit",
                     description: `${plan.name} Subscription`,
@@ -182,56 +220,110 @@ const Planspage = () => {
                     </p>
                 </div>
 
-                <div className="grid md:grid-cols-3 gap-8 mb-12">
-                    {plans.map((plan, index) => (
-                        <div
-                            key={index}
-                            className={`relative bg-gray-800 rounded-2xl p-8 shadow-xl transform hover:scale-105 transition-all duration-300 ${
-                                plan.popular ? 'border-2 border-orange-500' : ''
-                            }`}
-                        >
-                            {plan.popular && (
-                                <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
-                                    <span className="bg-orange-500 text-white px-4 py-1 rounded-full text-sm">
-                                        Most Popular
-                                    </span>
-                                </div>
-                            )}
-                            
-                            <h3 className="text-2xl font-bold text-white mb-4">{plan.name}</h3>
-                            <div className="text-4xl font-bold text-orange-500 mb-6">
-                                ₹{plan.price}
-                                <span className="text-gray-400 text-base">/month</span>
-                            </div>
-                            
-                            <ul className="space-y-4 mb-8">
-                                {plan.features.map((feature, i) => (
-                                    <li key={i} className="flex items-center text-gray-300">
-                                        <Check className="text-orange-500 mr-2" size={20} />
-                                        {feature}
-                                    </li>
-                                ))}
-                            </ul>
-                            
-                            <button
-                                onClick={() => handlePayment(plan)}
-                                disabled={loading}
-                                className="w-full bg-gradient-to-r from-orange-500 to-red-600 text-white rounded-lg py-3 px-4 font-semibold hover:from-orange-600 hover:to-red-700 transition-all duration-300 flex items-center justify-center group disabled:opacity-50 disabled:cursor-not-allowed"
+                {/* Coupon Section */}
+                <div className="mb-8 flex justify-center">
+                    {appliedCoupon ? (
+                        <div className="bg-green-500/20 text-green-400 px-4 py-2 rounded-lg flex items-center">
+                            <Tag size={20} className="mr-2" />
+                            <span>
+                                Coupon <strong>{appliedCoupon.code}</strong> applied for {appliedCoupon.discount}% discount!
+                            </span>
+                            <button 
+                                onClick={() => setAppliedCoupon(null)}
+                                className="ml-3 text-sm underline hover:text-green-300"
                             >
-                                {loading ? (
-                                    <div className="flex items-center">
-                                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                                        Processing...
-                                    </div>
-                                ) : (
-                                    <>
-                                        Get Started
-                                        <ArrowRight className="ml-2 transform group-hover:translate-x-1 transition-transform duration-300" size={20} />
-                                    </>
-                                )}
+                                Remove
                             </button>
                         </div>
-                    ))}
+                    ) : (
+                        showCouponInput ? (
+                            <div className="flex items-center">
+                                <input
+                                    type="text"
+                                    placeholder="Enter coupon code"
+                                    value={couponCode}
+                                    onChange={(e) => setCouponCode(e.target.value)}
+                                    className="bg-gray-800 text-white px-4 py-2 rounded-l-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                                />
+                                <button
+                                    onClick={handleApplyCoupon}
+                                    className="bg-orange-500 text-white px-4 py-2 rounded-r-lg hover:bg-orange-600 transition-colors duration-200"
+                                >
+                                    Apply
+                                </button>
+                            </div>
+                        ) : (
+                            <button
+                                onClick={() => setShowCouponInput(true)}
+                                className="text-orange-500 hover:text-orange-400 flex items-center"
+                            >
+                                <Tag size={20} className="mr-2" />
+                                Have a coupon code?
+                            </button>
+                        )
+                    )}
+                </div>
+
+                <div className="grid md:grid-cols-3 gap-8 mb-12">
+                    {plans.map((plan, index) => {
+                        const discountedPrice = calculateDiscountedPrice(plan.price);
+                        const hasDiscount = appliedCoupon && discountedPrice < plan.price;
+                        
+                        return (
+                            <div
+                                key={index}
+                                className={`relative bg-gray-800 rounded-2xl p-8 shadow-xl transform hover:scale-105 transition-all duration-300 ${
+                                    plan.popular ? 'border-2 border-orange-500' : ''
+                                }`}
+                            >
+                                {plan.popular && (
+                                    <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
+                                        <span className="bg-orange-500 text-white px-4 py-1 rounded-full text-sm">
+                                            Most Popular
+                                        </span>
+                                    </div>
+                                )}
+                                
+                                <h3 className="text-2xl font-bold text-white mb-4">{plan.name}</h3>
+                                <div className="text-4xl font-bold text-orange-500 mb-6">
+                                    {hasDiscount && (
+                                        <span className="line-through text-gray-500 text-2xl mr-2">
+                                            ₹{plan.price}
+                                        </span>
+                                    )}
+                                    ₹{discountedPrice}
+                                    <span className="text-gray-400 text-base">/month</span>
+                                </div>
+                                
+                                <ul className="space-y-4 mb-8">
+                                    {plan.features.map((feature, i) => (
+                                        <li key={i} className="flex items-center text-gray-300">
+                                            <Check className="text-orange-500 mr-2" size={20} />
+                                            {feature}
+                                        </li>
+                                    ))}
+                                </ul>
+                                
+                                <button
+                                    onClick={() => handlePayment(plan)}
+                                    disabled={loading}
+                                    className="w-full bg-gradient-to-r from-orange-500 to-red-600 text-white rounded-lg py-3 px-4 font-semibold hover:from-orange-600 hover:to-red-700 transition-all duration-300 flex items-center justify-center group disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    {loading ? (
+                                        <div className="flex items-center">
+                                            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                                            Processing...
+                                        </div>
+                                    ) : (
+                                        <>
+                                            Get Started
+                                            <ArrowRight className="ml-2 transform group-hover:translate-x-1 transition-transform duration-300" size={20} />
+                                        </>
+                                    )}
+                                </button>
+                            </div>
+                        );
+                    })}
                 </div>
             </div>
         </div>

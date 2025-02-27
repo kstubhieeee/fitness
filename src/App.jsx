@@ -11,9 +11,13 @@ import ProtectedRoute from './Components/ProtectedRoute/ProtectedRoute';
 import { Toaster } from 'react-hot-toast';
 import MemberSettings from './Components/Settings/MemberSettings';
 import TrainerSettings from './Components/Settings/TrainerSettings';
+import AdminLogin from './Components/Admin/AdminLogin';
+import AdminDashboard from './Components/Admin/AdminDashboard';
+import AdminCoupons from './Components/Admin/AdminCoupons';
 
 function App() {
   const isAuthenticated = localStorage.getItem('token');
+  const isAdminAuthenticated = localStorage.getItem('adminToken');
 
   return (
     <Router>
@@ -111,6 +115,34 @@ function App() {
             <ProtectedRoute allowedUserType="trainer">
               <TrainerSettings />
             </ProtectedRoute>
+          } 
+        />
+
+        {/* Admin Routes */}
+        <Route 
+          path="/admin/login" 
+          element={
+            isAdminAuthenticated ? 
+            <Navigate to="/admin/dashboard" /> : 
+            <AdminLogin />
+          } 
+        />
+
+        <Route 
+          path="/admin/dashboard" 
+          element={
+            isAdminAuthenticated ? 
+            <AdminDashboard /> : 
+            <Navigate to="/admin/login" />
+          } 
+        />
+
+        <Route 
+          path="/admin/coupons" 
+          element={
+            isAdminAuthenticated ? 
+            <AdminCoupons /> : 
+            <Navigate to="/admin/login" />
           } 
         />
       </Routes>

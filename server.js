@@ -16,7 +16,7 @@ const app = express();
 
 // Initialize Razorpay
 const razorpay = new Razorpay({
-    key_id: process.env.RAZORPAY_KEY_ID || 'rzp_test_ilZnoyJIDqrWYR',
+    key_id: process.env.RAZORPAY_ID || 'rzp_test_ilZnoyJIDqrWYR',
     key_secret: process.env.RAZORPAY_KEY_SECRET || 'mNh6LSxPXhLb7F6NZhGIw24L'
 });
 
@@ -101,6 +101,8 @@ const workoutPlanSchema = new mongoose.Schema({
     updatedAt: { type: Date, default: Date.now }
 });
 
+const WorkoutPlan = mongoose.model("WorkoutPlan", workoutPlanSchema);
+
 const dietPlanSchema = new mongoose.Schema({
     memberId: { type: mongoose.Schema.Types.ObjectId, ref: 'Member', required: true },
     trainerId: { type: mongoose.Schema.Types.ObjectId, ref: 'Trainer', required: true },
@@ -118,6 +120,8 @@ const dietPlanSchema = new mongoose.Schema({
     createdAt: { type: Date, default: Date.now },
     updatedAt: { type: Date, default: Date.now }
 });
+
+const DietPlan = mongoose.model("DietPlan", dietPlanSchema);
 
 const trainerSchema = new mongoose.Schema({
     username: { type: String, required: true, unique: true },
@@ -144,8 +148,7 @@ const trainerSchema = new mongoose.Schema({
     }]
 });
 
-const WorkoutPlan = mongoose.model("WorkoutPlan", workoutPlanSchema);
-const DietPlan = mongoose.model("DietPlan", dietPlanSchema);
+const Trainer = mongoose.model("Trainer", trainerSchema);
 
 const eventSchema = new mongoose.Schema({
     userId: { type: mongoose.Schema.Types.ObjectId, required: true },
@@ -155,8 +158,16 @@ const eventSchema = new mongoose.Schema({
 
 const Event = mongoose.model("Event", eventSchema);
 
-// Add the Trainer model
-const Trainer = mongoose.model("Trainer", trainerSchema);
+// Coupon Schema
+const couponSchema = new mongoose.Schema({
+    code: { type: String, required: true, unique: true },
+    discount: { type: Number, required: true },
+    expiryDate: { type: Date, required: true },
+    isActive: { type: Boolean, default: true },
+    createdAt: { type: Date, default: Date.now }
+});
+
+const Coupon = mongoose.model("Coupon", couponSchema);
 
 // Authentication Middleware
 const authMiddleware = (req, res, next) => {
@@ -175,6 +186,28 @@ const authMiddleware = (req, res, next) => {
     }
 };
 
+// Admin Authentication Middleware
+const adminAuthMiddleware = (req, res, next) => {
+    try {
+        const token = req.header('Authorization')?.replace('Bearer ', '');
+
+        if (!token) {
+            return res.status(401).json({ message: 'Access denied. No token provided.' });
+        }
+
+        // For simplicity, we're using a hardcoded token check
+        // In a real app, you would verify a proper JWT token
+        if (token !== 'admin-jwt-token') {
+            return res.status(401).json({ message: 'Invalid admin token' });
+        }
+        
+        req.admin = { isAdmin: true };
+        next();
+    } catch (err) {
+        res.status(401).json({ message: 'Invalid token' });
+    }
+};
+
 // Role-based Authorization Middleware
 const authorize = (...roles) => {
     return (req, res, next) => {
@@ -186,6 +219,206 @@ const authorize = (...roles) => {
         next();
     };
 };
+
+// Admin Routes
+app.get("/api/admin/members", adminAuthMiddleware, async (req, res) => {
+    try {
+        const members = await Member.find().select('-password');
+        res.json(members);
+    } catch (error) {
+        console.error("Error fetching members:", error);
+        res.status(500).json({ message: "Error fetching members" });
+    }
+});
+
+app.get("/api/admin/trainers", adminAuthMiddleware, async (req, res) => {
+    try {
+        const trainers = await Trainer.find().select('-password');
+        res.json(trainers);
+    } catch (error) {
+        console.error("Error fetching trainers:", error);
+        res.status(500).json({ message: "Error fetching trainers" });
+    }
+});
+
+app.put("/api/admin/members/:id", adminAuthMiddleware, async (req, res) => {
+    try {
+        const { username, email, phone, age, gender } = req.body;
+        
+        const member = await Member.findByIdAndUpdate(
+            req.params.id,
+            { username, email, phone, age, gender },
+            { new: true }
+        ).select('-password');
+        
+        if (!member) {
+            return res.status(404).json({ message: "Member not found" });
+        }
+        
+        res.json(member);
+    } catch (error) {
+        console.error("Error updating member:", error);
+        res.status(500).json({ message: "Error updating member" });
+    }
+});
+
+app.put("/api/admin/trainers/:id", adminAuthMiddleware, async (req, res) => {
+    try {
+        const { username, email, fullName, phone, specialization, experience, feePerMonth } = req.body;
+        
+        const trainer = await Trainer.findByIdAndUpdate(
+            req.params.id,
+            { username, email, fullName, phone, specialization, experience, feePerMonth },
+            { new: true }
+        ).select('-password');
+        
+        if (!trainer) {
+            return res.status(404).json({ message: "Trainer not found" });
+        }
+        
+        res.json(trainer);
+    } catch (error) {
+        console.error("Error updating trainer:", error);
+        res.status(500).json({ message: "Error updating trainer" });
+    }
+});
+
+app.delete("/api/admin/members/:id", adminAuthMiddleware, async (req, res) => {
+    try {
+        const member = await Member.findByIdAndDelete(req.params.id);
+        
+        if (!member) {
+            return res.status(404).json({ message: "Member not found" });
+        }
+        
+        res.json({ message: "Member deleted successfully" });
+    } catch (error) {
+        console.error("Error deleting member:", error);
+        res.status(500).json({ message: "Error deleting member" });
+    }
+});
+
+app.delete("/api/admin/trainers/:id", adminAuthMiddleware, async (req, res) => {
+    try {
+        const trainer = await Trainer.findByIdAndDelete(req.params.id);
+        
+        if (!trainer) {
+            return res.status(404).json({ message: "Trainer not found" });
+        }
+        
+        res.json({ message: "Trainer deleted successfully" });
+    } catch (error) {
+        console.error("Error deleting trainer:", error);
+        res.status(500).json({ message: "Error deleting trainer" });
+    }
+});
+
+// Coupon Routes
+app.get("/api/admin/coupons", adminAuthMiddleware, async (req, res) => {
+    try {
+        const coupons = await Coupon.find();
+        res.json(coupons);
+    } catch (error) {
+        console.error("Error fetching coupons:", error);
+        res.status(500).json({ message: "Error fetching coupons" });
+    }
+});
+
+app.post("/api/admin/coupons", adminAuthMiddleware, async (req, res) => {
+    try {
+        const { code, discount, expiryDate, isActive } = req.body;
+        
+        const existingCoupon = await Coupon.findOne({ code });
+        if (existingCoupon) {
+            return res.status(400).json({ message: "Coupon code already exists" });
+        }
+        
+        const newCoupon = new Coupon({
+            code,
+            discount,
+            expiryDate,
+            isActive
+        });
+        
+        await newCoupon.save();
+        res.status(201).json(newCoupon);
+    } catch (error) {
+        console.error("Error creating coupon:", error);
+        res.status(500).json({ message: "Error creating coupon" });
+    }
+});
+
+app.put("/api/admin/coupons/:id", adminAuthMiddleware, async (req, res) => {
+    try {
+        const { code, discount, expiryDate, isActive } = req.body;
+        
+        // Check if updated code already exists (excluding the current coupon)
+        const existingCoupon = await Coupon.findOne({ 
+            code, 
+            _id: { $ne: req.params.id } 
+        });
+        
+        if (existingCoupon) {
+            return res.status(400).json({ message: "Coupon code already exists" });
+        }
+        
+        const coupon = await Coupon.findByIdAndUpdate(
+            req.params.id,
+            { code, discount, expiryDate, isActive },
+            { new: true }
+        );
+        
+        if (!coupon) {
+            return res.status(404).json({ message: "Coupon not found" });
+        }
+        
+        res.json(coupon);
+    } catch (error) {
+        console.error("Error updating coupon:", error);
+        res.status(500).json({ message: "Error updating coupon" });
+    }
+});
+
+app.delete("/api/admin/coupons/:id", adminAuthMiddleware, async (req, res) => {
+    try {
+        const coupon = await Coupon.findByIdAndDelete(req.params.id);
+        
+        if (!coupon) {
+            return res.status(404).json({ message: "Coupon not found" });
+        }
+        
+        res.json({ message: "Coupon deleted successfully" });
+    } catch (error) {
+        console.error("Error deleting coupon:", error);
+        res.status(500).json({ message: "Error deleting coupon" });
+    }
+});
+
+// Validate Coupon Route (for members)
+app.post("/api/coupons/validate", authMiddleware, async (req, res) => {
+    try {
+        const { code } = req.body;
+        
+        const coupon = await Coupon.findOne({ 
+            code, 
+            isActive: true,
+            expiryDate: { $gt: new Date() }
+        });
+        
+        if (!coupon) {
+            return res.status(404).json({ message: "Invalid or expired coupon" });
+        }
+        
+        res.json({
+            code: coupon.code,
+            discount: coupon.discount,
+            expiryDate: coupon.expiryDate
+        });
+    } catch (error) {
+        console.error("Error validating coupon:", error);
+        res.status(500).json({ message: "Error validating coupon" });
+    }
+});
 
 // Trainer Selection Routes
 app.post("/api/members/select-trainer", authMiddleware, authorize("member"), async (req, res) => {
