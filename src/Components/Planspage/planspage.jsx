@@ -9,7 +9,7 @@ const Planspage = () => {
     const [memberProfile, setMemberProfile] = useState(null);
     const [couponCode, setCouponCode] = useState('');
     const [appliedCoupon, setAppliedCoupon] = useState(null);
-    const [showCouponInput, setShowCouponInput] = useState(false);
+    const [showCouponInput, setShowCouponInput] = useState(true);
     const navigate = useNavigate();
     
     useEffect(() => {
@@ -82,29 +82,49 @@ const Planspage = () => {
         }
     ];
 
-    // Sample coupons (in a real app, these would be fetched from the server)
-    const availableCoupons = [
-        { code: 'SUMMER25', discount: 25, expiryDate: '2025-08-31', isActive: true },
-        { code: 'WELCOME10', discount: 10, expiryDate: '2025-12-31', isActive: true },
-        { code: 'FLASH50', discount: 50, expiryDate: '2025-06-30', isActive: true }
-    ];
-
-    const handleApplyCoupon = () => {
+    const handleApplyCoupon = async () => {
         if (!couponCode.trim()) {
             toast.error('Please enter a coupon code');
             return;
         }
 
-        const coupon = availableCoupons.find(
-            c => c.code.toLowerCase() === couponCode.toLowerCase() && c.isActive
-        );
-
-        if (coupon) {
-            setAppliedCoupon(coupon);
-            toast.success(`Coupon applied! ${coupon.discount}% discount`);
-            setShowCouponInput(false);
-        } else {
-            toast.error('Invalid or expired coupon code');
+        try {
+            const response = await fetch('http://localhost:5000/api/coupons/validate', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                },
+                body: JSON.stringify({ code: couponCode })
+            });
+            
+            if (response.ok) {
+                const couponData = await response.json();
+                setAppliedCoupon(couponData);
+                toast.success(`Coupon applied! ${couponData.discount}% discount`);
+            } else {
+                // Fallback for demo purposes
+                // In a real app, you would only rely on the API response
+                const sampleCoupons = [
+                    { code: 'SUMMER25', discount: 25, expiryDate: '2025-08-31', isActive: true },
+                    { code: 'WELCOME10', discount: 10, expiryDate: '2025-12-31', isActive: true },
+                    { code: 'FLASH50', discount: 50, expiryDate: '2025-06-30', isActive: true }
+                ];
+                
+                const coupon = sampleCoupons.find(
+                    c => c.code.toLowerCase() === couponCode.toLowerCase() && c.isActive
+                );
+                
+                if (coupon) {
+                    setAppliedCoupon(coupon);
+                    toast.success(`Coupon applied! ${coupon.discount}% discount`);
+                } else {
+                    toast.error('Invalid or expired coupon code');
+                }
+            }
+        } catch (error) {
+            console.error('Error validating coupon:', error);
+            toast.error('Error validating coupon');
         }
     };
 
@@ -220,7 +240,7 @@ const Planspage = () => {
                     </p>
                 </div>
 
-                {/* Coupon Section */}
+                {/* Coupon Input Section */}
                 <div className="mb-8 flex justify-center">
                     {appliedCoupon ? (
                         <div className="bg-green-500/20 text-green-400 px-4 py-2 rounded-lg flex items-center">
@@ -229,38 +249,32 @@ const Planspage = () => {
                                 Coupon <strong>{appliedCoupon.code}</strong> applied for {appliedCoupon.discount}% discount!
                             </span>
                             <button 
-                                onClick={() => setAppliedCoupon(null)}
+                                onClick={() => {
+                                    setAppliedCoupon(null);
+                                    setCouponCode('');
+                                    setShowCouponInput(true);
+                                }}
                                 className="ml-3 text-sm underline hover:text-green-300"
                             >
                                 Remove
                             </button>
                         </div>
                     ) : (
-                        showCouponInput ? (
-                            <div className="flex items-center">
-                                <input
-                                    type="text"
-                                    placeholder="Enter coupon code"
-                                    value={couponCode}
-                                    onChange={(e) => setCouponCode(e.target.value)}
-                                    className="bg-gray-800 text-white px-4 py-2 rounded-l-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
-                                />
-                                <button
-                                    onClick={handleApplyCoupon}
-                                    className="bg-orange-500 text-white px-4 py-2 rounded-r-lg hover:bg-orange-600 transition-colors duration-200"
-                                >
-                                    Apply
-                                </button>
-                            </div>
-                        ) : (
+                        <div className="flex items-center">
+                            <input
+                                type="text"
+                                placeholder="Enter coupon code"
+                                value={couponCode}
+                                onChange={(e) => setCouponCode(e.target.value)}
+                                className="bg-gray-800 text-white px-4 py-2 rounded-l-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                            />
                             <button
-                                onClick={() => setShowCouponInput(true)}
-                                className="text-orange-500 hover:text-orange-400 flex items-center"
+                                onClick={handleApplyCoupon}
+                                className="bg-orange-500 text-white px-4 py-2 rounded-r-lg hover:bg-orange-600 transition-colors duration-200"
                             >
-                                <Tag size={20} className="mr-2" />
-                                Have a coupon code?
+                                Apply
                             </button>
-                        )
+                        </div>
                     )}
                 </div>
 
@@ -294,6 +308,12 @@ const Planspage = () => {
                                     ₹{discountedPrice}
                                     <span className="text-gray-400 text-base">/month</span>
                                 </div>
+                                
+                                {hasDiscount && (
+                                    <div className="bg-green-500/20 text-green-400 px-3 py-1 rounded-lg text-sm mb-4 inline-block">
+                                        You save ₹{plan.price - discountedPrice}!
+                                    </div>
+                                )}
                                 
                                 <ul className="space-y-4 mb-8">
                                     {plan.features.map((feature, i) => (
