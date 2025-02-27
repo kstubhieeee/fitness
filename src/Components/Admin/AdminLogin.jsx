@@ -28,13 +28,16 @@ const AdminLogin = () => {
             localStorage.setItem('adminToken', 'admin-jwt-token');
             localStorage.setItem('adminEmail', formData.email);
             
-            navigate('/admin/dashboard');
-            toast.success('Admin login successful!');
+            // Use setTimeout to ensure state updates before navigation
+            setTimeout(() => {
+                navigate('/admin/dashboard');
+                toast.success('Admin login successful!');
+                setLoading(false);
+            }, 100);
         } else {
             toast.error('Invalid admin credentials');
+            setLoading(false);
         }
-
-        setLoading(false);
     };
 
     return (

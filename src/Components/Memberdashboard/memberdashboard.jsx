@@ -180,6 +180,15 @@ const MemberDashboard = () => {
     const handleAddEvent = async () => {
         if (!newEvent.trim()) return;
 
+        // Validate that the selected date is not in the past
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        if (date < today) {
+            toast.error("Cannot create events in the past");
+            return;
+        }
+
         try {
             const response = await fetch('http://localhost:5000/api/events', {
                 method: 'POST',
@@ -202,6 +211,15 @@ const MemberDashboard = () => {
 
     const handleEditEvent = async (event) => {
         if (editingEvent === event._id) {
+            // Validate that the selected date is not in the past
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            
+            if (date < today) {
+                toast.error("Cannot schedule events in the past");
+                return;
+            }
+
             try {
                 const response = await fetch(`http://localhost:5000/api/events/${event._id}`, {
                     method: 'PUT',
@@ -275,6 +293,15 @@ const MemberDashboard = () => {
             color: "bg-purple-500"
         }
     ];
+
+    // Function to disable past dates in the calendar
+    const tileDisabled = ({ date, view }) => {
+        if (view === 'month') {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            return date < today;
+        }
+    };
 
     if (loading) return (
         <div className="min-h-screen bg-gray-900 flex items-center justify-center">
@@ -458,6 +485,7 @@ const MemberDashboard = () => {
                                             ? 'bg-orange-500 text-white rounded-full'
                                             : null
                                     }
+                                    tileDisabled={tileDisabled}
                                 />
                             </div>
                             <div>

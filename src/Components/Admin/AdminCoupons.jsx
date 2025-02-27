@@ -64,10 +64,13 @@ const AdminCoupons = () => {
     };
 
     const handleAddCoupon = () => {
+        // Set minimum date to today for new coupons
+        const today = new Date().toISOString().split('T')[0];
+        
         setCurrentCoupon({
             code: '',
             discount: 10,
-            expiryDate: '',
+            expiryDate: today,
             isActive: true
         });
         setIsEditing(false);
@@ -119,6 +122,16 @@ const AdminCoupons = () => {
         
         if (!currentCoupon.code || !currentCoupon.discount || !currentCoupon.expiryDate) {
             toast.error('Please fill all required fields');
+            return;
+        }
+
+        // Validate expiry date is not in the past
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const expiryDate = new Date(currentCoupon.expiryDate);
+        
+        if (expiryDate < today) {
+            toast.error('Expiry date cannot be in the past');
             return;
         }
 
@@ -325,6 +338,7 @@ const AdminCoupons = () => {
                                     name="expiryDate"
                                     value={currentCoupon.expiryDate}
                                     onChange={handleInputChange}
+                                    min={new Date().toISOString().split('T')[0]} // Set minimum date to today
                                     className="w-full bg-gray-700 text-white rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-orange-500"
                                     required
                                 />
