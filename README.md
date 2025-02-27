@@ -17,7 +17,7 @@ A comprehensive fitness club management system that allows members to manage the
 
 1. **Clone the Repository**:
    ```bash
-   git clone https://github.com/kstubhieeee/gaurav.git
+   git clone https://github.com/kstubhieeee/fitness.git
    ```
    ```
    cd fitness-club-management
