@@ -6,6 +6,7 @@ import { Star, MessageSquare, Search, Edit2, Trash2, CheckCircle, Filter, Clock,
 import "./styles.css";
 import ProfileDropdown from "../ProfileDropdown/ProfileDropdown";
 import toast from 'react-hot-toast';
+import UpgradePlanModal from "../UpgradePlanModal/UpgradePlanModal";
 
 const MemberDashboard = () => {
     const [trainers, setTrainers] = useState([]);
@@ -86,6 +87,29 @@ const MemberDashboard = () => {
             }
         };
 
+        const loadRazorpayScript = () => {
+            return new Promise((resolve) => {
+                const script = document.createElement('script');
+                script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+                script.onload = () => {
+                    resolve(true);
+                };
+                script.onerror = () => {
+                    resolve(false);
+                };
+                document.body.appendChild(script);
+            });
+        };
+
+        const initialize = async () => {
+            const razorpayLoaded = await loadRazorpayScript();
+            if (!razorpayLoaded) {
+                toast.error('Failed to load Razorpay script');
+            }
+        };
+
+        initialize();
+
         fetchData();
     }, [navigate]);
 
@@ -96,7 +120,7 @@ const MemberDashboard = () => {
                     'Authorization': `Bearer ${localStorage.getItem('token')}`
                 }
             });
-            
+
             if (response.ok) {
                 const data = await response.json();
                 setMemberProfile(data);
@@ -111,7 +135,7 @@ const MemberDashboard = () => {
     const handlePlanUpdate = async (plan) => {
         try {
             setLoading(true);
-            
+
             const response = await fetch('http://localhost:5000/api/members/update-plan', {
                 method: 'POST',
                 headers: {
@@ -137,7 +161,7 @@ const MemberDashboard = () => {
                 name: "Power Fit",
                 description: `${plan.name} Subscription`,
                 order_id: order.id,
-                handler: async function(response) {
+                handler: async function (response) {
                     try {
                         const verifyResponse = await fetch('http://localhost:5000/api/verify-payment', {
                             method: 'POST',
@@ -208,14 +232,14 @@ const MemberDashboard = () => {
                     'Authorization': `Bearer ${localStorage.getItem('token')}`
                 }
             });
-            
+
             if (!response.ok) {
                 throw new Error('Failed to fetch member profile');
             }
-            
+
             const data = await response.json();
             setMemberProfile(data);
-            
+
             if (data.assignedTrainer) {
                 setSelectedTrainer(data.assignedTrainer);
                 await Promise.all([
@@ -236,7 +260,7 @@ const MemberDashboard = () => {
                     'Authorization': `Bearer ${localStorage.getItem('token')}`
                 }
             });
-            
+
             if (response.ok) {
                 const data = await response.json();
                 setWorkoutPlan(data);
@@ -257,7 +281,7 @@ const MemberDashboard = () => {
                     'Authorization': `Bearer ${localStorage.getItem('token')}`
                 }
             });
-            
+
             if (response.ok) {
                 const data = await response.json();
                 setDietPlan(data);
@@ -319,7 +343,7 @@ const MemberDashboard = () => {
         // Validate that the selected date is not in the past
         const today = new Date();
         today.setHours(0, 0, 0, 0);
-        
+
         if (date < today) {
             toast.error("Cannot create events in the past");
             return;
@@ -350,7 +374,7 @@ const MemberDashboard = () => {
             // Validate that the selected date is not in the past
             const today = new Date();
             today.setHours(0, 0, 0, 0);
-            
+
             if (date < today) {
                 toast.error("Cannot schedule events in the past");
                 return;
@@ -401,9 +425,9 @@ const MemberDashboard = () => {
 
     const filteredTrainers = trainers.filter(trainer => {
         const matchesSearch = trainer.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                            trainer.specialization?.toLowerCase().includes(searchTerm.toLowerCase());
-        const matchesSpecialization = selectedSpecialization === 'all' || 
-                                    trainer.specialization?.toLowerCase() === selectedSpecialization.toLowerCase();
+            trainer.specialization?.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesSpecialization = selectedSpecialization === 'all' ||
+            trainer.specialization?.toLowerCase() === selectedSpecialization.toLowerCase();
         return matchesSearch && matchesSpecialization;
     });
 
@@ -411,7 +435,7 @@ const MemberDashboard = () => {
 
     const stats = [
         { icon: <Users size={24} />, title: "Total Members", value: members.length },
-       { icon: <TrendingUp size={24} />, title: "Weekly Sessions", value: members.length * 3 },
+        { icon: <TrendingUp size={24} />, title: "Weekly Sessions", value: members.length * 3 },
         { icon: <Package size={24} />, title: "Current Plan", value: currentPlan?.type || "None" }
     ];
 
@@ -435,9 +459,8 @@ const MemberDashboard = () => {
             <div className="bg-gray-800 p-6 rounded-xl shadow-lg">
                 <div className="flex items-center justify-between mb-4">
                     <h3 className="text-xl font-semibold text-white">Current Plan</h3>
-                    <span className={`px-3 py-1 rounded-full text-sm ${
-                        currentPlan.status === 'active' ? 'bg-green-500/20 text-green-400' : 'bg-gray-500/20 text-gray-400'
-                    }`}>
+                    <span className={`px-3 py-1 rounded-full text-sm ${currentPlan.status === 'active' ? 'bg-green-500/20 text-green-400' : 'bg-gray-500/20 text-gray-400'
+                        }`}>
                         {currentPlan.status}
                     </span>
                 </div>
@@ -465,6 +488,11 @@ const MemberDashboard = () => {
         }
     };
 
+    const handleSelectPlan = async (plan) => {
+        await handlePlanUpdate(plan);
+        setShowPlanModal(false);
+    };
+
     if (loading) return (
         <div className="min-h-screen bg-gray-900 flex items-center justify-center">
             <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-orange-500"></div>
@@ -478,9 +506,9 @@ const MemberDashboard = () => {
                     <h1 className="text-3xl font-bold text-white">
                         Welcome back, {memberProfile?.username || 'Member'}! 👋
                     </h1>
-                    <ProfileDropdown 
-                        username={memberProfile?.username || localStorage.getItem('username')} 
-                        userType="member" 
+                    <ProfileDropdown
+                        username={memberProfile?.username || localStorage.getItem('username')}
+                        userType="member"
                     />
                 </div>
             </header>
@@ -492,8 +520,8 @@ const MemberDashboard = () => {
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                     {stats.map((stat, index) => (
-                        <div key={index} 
-                             className="bg-gray-800 p-6 rounded-xl shadow-lg hover:transform hover:scale-105 transition-all duration-300">
+                        <div key={index}
+                            className="bg-gray-800 p-6 rounded-xl shadow-lg hover:transform hover:scale-105 transition-all duration-300">
                             <div className={`inline-flex p-3 rounded-lg ${stat.color} bg-opacity-20 mb-4`}>
                                 {stat.icon}
                             </div>
@@ -506,32 +534,29 @@ const MemberDashboard = () => {
                 <div className="flex space-x-4 mb-8 border-b border-gray-700">
                     <button
                         onClick={() => setActiveTab('trainers')}
-                        className={`px-4 py-2 font-medium transition-colors duration-200 ${
-                            activeTab === 'trainers' 
-                            ? 'text-orange-500 border-b-2 border-orange-500' 
+                        className={`px-4 py-2 font-medium transition-colors duration-200 ${activeTab === 'trainers'
+                            ? 'text-orange-500 border-b-2 border-orange-500'
                             : 'text-gray-400 hover:text-white'
-                        }`}
+                            }`}
                     >
                         Find Trainers
                     </button>
                     <button
                         onClick={() => setActiveTab('schedule')}
-                        className={`px-4 py-2 font-medium transition-colors duration-200 ${
-                            activeTab === 'schedule' 
-                            ? 'text-orange-500 border-b-2 border-orange-500' 
+                        className={`px-4 py-2 font-medium transition-colors duration-200 ${activeTab === 'schedule'
+                            ? 'text-orange-500 border-b-2 border-orange-500'
                             : 'text-gray-400 hover:text-white'
-                        }`}
+                            }`}
                     >
                         My Schedule
                     </button>
                     {selectedTrainer && (
                         <button
                             onClick={() => setActiveTab('plans')}
-                            className={`px-4 py-2 font-medium transition-colors duration-200 ${
-                                activeTab === 'plans' 
-                                ? 'text-orange-500 border-b-2 border-orange-500' 
+                            className={`px-4 py-2 font-medium transition-colors duration-200 ${activeTab === 'plans'
+                                ? 'text-orange-500 border-b-2 border-orange-500'
                                 : 'text-gray-400 hover:text-white'
-                            }`}
+                                }`}
                         >
                             My Plans
                         </button>
@@ -572,8 +597,8 @@ const MemberDashboard = () => {
 
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                             {filteredTrainers.map(trainer => (
-                                <div key={trainer._id} 
-                                     className="bg-gray-800 rounded-xl p-6 shadow-lg hover:transform hover:scale-105 transition-all duration-300">
+                                <div key={trainer._id}
+                                    className="bg-gray-800 rounded-xl p-6 shadow-lg hover:transform hover:scale-105 transition-all duration-300">
                                     <div className="flex items-start space-x-4">
                                         <img
                                             src={trainer.photo}
@@ -589,11 +614,10 @@ const MemberDashboard = () => {
                                                 {[...Array(5)].map((_, i) => (
                                                     <Star
                                                         key={i}
-                                                        className={`w-4 h-4 ${
-                                                            i < Math.floor(trainer.rating || 0)
-                                                                ? 'text-yellow-400 fill-current'
-                                                                : 'text-gray-400'
-                                                        }`}
+                                                        className={`w-4 h-4 ${i < Math.floor(trainer.rating || 0)
+                                                            ? 'text-yellow-400 fill-current'
+                                                            : 'text-gray-400'
+                                                            }`}
                                                     />
                                                 ))}
                                                 <span className="text-gray-400 ml-2">
@@ -608,7 +632,7 @@ const MemberDashboard = () => {
                                             </p>
                                             <div className="mt-4 flex space-x-3">
                                                 {selectedTrainer?._id === trainer._id ? (
-                                                    <button 
+                                                    <button
                                                         className="flex-1 bg-green-500 text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2"
                                                         disabled
                                                     >
@@ -616,7 +640,7 @@ const MemberDashboard = () => {
                                                         Selected
                                                     </button>
                                                 ) : (
-                                                    <button 
+                                                    <button
                                                         onClick={() => handleSelectTrainer(trainer)}
                                                         className="flex-1 bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2 transition-colors duration-200"
                                                     >
@@ -765,8 +789,16 @@ const MemberDashboard = () => {
                     </div>
                 )}
             </main>
+
+            <UpgradePlanModal
+                isOpen={showPlanModal}
+                onClose={() => setShowPlanModal(false)}
+                plans={plans}
+                onSelectPlan={handleSelectPlan}
+            />
         </div>
     );
 };
 
 export default MemberDashboard;
+
