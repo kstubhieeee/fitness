@@ -20,7 +20,7 @@ A comprehensive fitness club management system that allows members to manage the
    git clone https://github.com/kstubhieeee/fitness.git
    ```
    ```
-   cd fitness-club-management
+   cd fitness
    ```
 
 2. **Install Dependencies**:
