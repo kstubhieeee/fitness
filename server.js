@@ -1026,6 +1026,51 @@ app.post('/api/verify-payment', authMiddleware, async (req, res) => {
     }
 });
 
+// Get member's current plan
+app.get("/api/members/current-plan", authMiddleware, authorize("member"), async (req, res) => {
+    try {
+        const member = await Member.findById(req.user.id).select('membership');
+        if (!member) {
+            return res.status(404).json({ message: "Member not found" });
+        }
+        res.json(member.membership);
+    } catch (error) {
+        res.status(500).json({ message: "Error fetching current plan" });
+    }
+});
+
+// Update membership plan
+app.post("/api/members/update-plan", authMiddleware, authorize("member"), async (req, res) => {
+    try {
+        const { planName, amount } = req.body;
+        
+        // Create Razorpay order
+        const order = await razorpay.orders.create({
+            amount: amount * 100, // Convert to paise
+            currency: "INR",
+            receipt: "order_" + Date.now(),
+        });
+
+        // Update member's plan details
+        const member = await Member.findById(req.user.id);
+        if (!member) {
+            return res.status(404).json({ message: "Member not found" });
+        }
+
+        member.membership = {
+            type: planName,
+            startDate: new Date(),
+            endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
+            status: "active"
+        };
+
+        await member.save();
+        res.json({ order, member });
+    } catch (error) {
+        res.status(500).json({ message: "Error updating plan" });
+    }
+});
+
 // Connect to Database and Start Server
 const PORT = process.env.PORT || 5000;
 

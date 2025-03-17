@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import Calendar from 'react-calendar';
 import 'react-calendar/dist/Calendar.css';
 import { useNavigate } from "react-router-dom";
-import { Star, MessageSquare, Search, Edit2, Trash2, CheckCircle, Filter, Clock, Dumbbell, Activity } from 'lucide-react';
+import { Star, MessageSquare, Search, Edit2, Trash2, CheckCircle, Filter, Clock, Dumbbell, Activity, CreditCard, Package, X, Users, TrendingUp } from 'lucide-react';
 import "./styles.css";
 import ProfileDropdown from "../ProfileDropdown/ProfileDropdown";
 import toast from 'react-hot-toast';
@@ -22,7 +22,46 @@ const MemberDashboard = () => {
     const [workoutPlan, setWorkoutPlan] = useState(null);
     const [dietPlan, setDietPlan] = useState(null);
     const [memberProfile, setMemberProfile] = useState(null);
-    const [activeTab, setActiveTab] = useState('trainers'); // New state for tab management
+    const [activeTab, setActiveTab] = useState('trainers');
+    const [currentPlan, setCurrentPlan] = useState(null);
+    const [showPlanModal, setShowPlanModal] = useState(false);
+    const [members, setMembers] = useState([]);
+
+    const plans = [
+        {
+            name: "Basic Plan",
+            price: 2500,
+            features: [
+                "Access to gym equipment",
+                "Basic workout plans",
+                "Locker room access",
+                "1 free trainer session",
+                "Access to fitness classes"
+            ]
+        },
+        {
+            name: "Premium Plan",
+            price: 3000,
+            features: [
+                "All Basic Plan features",
+                "3 trainer sessions/month",
+                "Nutrition consultation",
+                "Access to premium classes",
+                "Sauna & spa access"
+            ]
+        },
+        {
+            name: "Pro Plan",
+            price: 4500,
+            features: [
+                "All Premium Plan features",
+                "Unlimited trainer sessions",
+                "Personalized workout plans",
+                "Priority booking",
+                "Exclusive member events"
+            ]
+        }
+    ];
 
     useEffect(() => {
         const token = localStorage.getItem('token');
@@ -36,7 +75,8 @@ const MemberDashboard = () => {
                 await Promise.all([
                     fetchTrainers(),
                     fetchMemberProfile(),
-                    fetchEvents()
+                    fetchEvents(),
+                    fetchMemberData()
                 ]);
                 setLoading(false);
             } catch (err) {
@@ -48,6 +88,102 @@ const MemberDashboard = () => {
 
         fetchData();
     }, [navigate]);
+
+    const fetchMemberData = async () => {
+        try {
+            const response = await fetch('http://localhost:5000/api/members/profile', {
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                }
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                setMemberProfile(data);
+                setCurrentPlan(data.membership);
+            }
+        } catch (error) {
+            console.error('Error fetching member data:', error);
+            toast.error('Failed to load member data');
+        }
+    };
+
+    const handlePlanUpdate = async (plan) => {
+        try {
+            setLoading(true);
+            
+            const response = await fetch('http://localhost:5000/api/members/update-plan', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                },
+                body: JSON.stringify({
+                    planName: plan.name,
+                    amount: plan.price
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to update plan');
+            }
+
+            const { order } = await response.json();
+
+            const options = {
+                key: 'rzp_test_ilZnoyJIDqrWYR',
+                amount: plan.price * 100,
+                currency: "INR",
+                name: "Power Fit",
+                description: `${plan.name} Subscription`,
+                order_id: order.id,
+                handler: async function(response) {
+                    try {
+                        const verifyResponse = await fetch('http://localhost:5000/api/verify-payment', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${localStorage.getItem('token')}`
+                            },
+                            body: JSON.stringify({
+                                razorpay_payment_id: response.razorpay_payment_id,
+                                razorpay_order_id: response.razorpay_order_id,
+                                razorpay_signature: response.razorpay_signature,
+                                planName: plan.name
+                            })
+                        });
+
+                        if (verifyResponse.ok) {
+                            await fetchMemberData();
+                            setShowPlanModal(false);
+                            toast.success('Plan updated successfully!');
+                        } else {
+                            throw new Error('Payment verification failed');
+                        }
+                    } catch (error) {
+                        console.error('Payment verification error:', error);
+                        toast.error('Payment verification failed');
+                    }
+                },
+                prefill: {
+                    name: memberProfile?.username || '',
+                    email: memberProfile?.email || ''
+                },
+                theme: {
+                    color: "#f97316"
+                }
+            };
+
+            const razorpayInstance = new window.Razorpay(options);
+            razorpayInstance.open();
+
+        } catch (error) {
+            console.error('Error updating plan:', error);
+            toast.error('Failed to update plan');
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const fetchTrainers = async () => {
         try {
@@ -274,27 +410,53 @@ const MemberDashboard = () => {
     const specializations = ['all', ...new Set(trainers.map(trainer => trainer.specialization))];
 
     const stats = [
-        {
-            icon: <Activity className="w-6 h-6" />,
-            title: "Workout Progress",
-            value: "75%",
-            color: "bg-green-500"
-        },
-        {
-            icon: <Clock className="w-6 h-6" />,
-            title: "Training Hours",
-            value: "12.5h",
-            color: "bg-blue-500"
-        },
-        {
-            icon: <Dumbbell className="w-6 h-6" />,
-            title: "Exercises Done",
-            value: "48",
-            color: "bg-purple-500"
-        }
+        { icon: <Users size={24} />, title: "Total Members", value: members.length },
+       { icon: <TrendingUp size={24} />, title: "Weekly Sessions", value: members.length * 3 },
+        { icon: <Package size={24} />, title: "Current Plan", value: currentPlan?.type || "None" }
     ];
 
-    // Function to disable past dates in the calendar
+    const renderCurrentPlan = () => {
+        if (!currentPlan) {
+            return (
+                <div className="bg-gray-800 p-6 rounded-xl shadow-lg">
+                    <h3 className="text-xl font-semibold text-white mb-4">No Active Plan</h3>
+                    <p className="text-gray-400 mb-4">You don't have an active membership plan.</p>
+                    <button
+                        onClick={() => setShowPlanModal(true)}
+                        className="bg-orange-500 text-white px-4 py-2 rounded-lg hover:bg-orange-600 transition-colors duration-200"
+                    >
+                        Choose a Plan
+                    </button>
+                </div>
+            );
+        }
+
+        return (
+            <div className="bg-gray-800 p-6 rounded-xl shadow-lg">
+                <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-xl font-semibold text-white">Current Plan</h3>
+                    <span className={`px-3 py-1 rounded-full text-sm ${
+                        currentPlan.status === 'active' ? 'bg-green-500/20 text-green-400' : 'bg-gray-500/20 text-gray-400'
+                    }`}>
+                        {currentPlan.status}
+                    </span>
+                </div>
+                <div className="space-y-2 mb-6">
+                    <p className="text-2xl font-bold text-orange-500">{currentPlan.type}</p>
+                    <p className="text-gray-400">
+                        Valid until: {new Date(currentPlan.endDate).toLocaleDateString()}
+                    </p>
+                </div>
+                <button
+                    onClick={() => setShowPlanModal(true)}
+                    className="bg-orange-500 text-white px-4 py-2 rounded-lg hover:bg-orange-600 transition-colors duration-200"
+                >
+                    Change Plan
+                </button>
+            </div>
+        );
+    };
+
     const tileDisabled = ({ date, view }) => {
         if (view === 'month') {
             const today = new Date();
@@ -324,7 +486,10 @@ const MemberDashboard = () => {
             </header>
 
             <main className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
-                {/* Stats Grid */}
+                <div className="mb-8">
+                    {renderCurrentPlan()}
+                </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                     {stats.map((stat, index) => (
                         <div key={index} 
@@ -338,7 +503,6 @@ const MemberDashboard = () => {
                     ))}
                 </div>
 
-                {/* Tab Navigation */}
                 <div className="flex space-x-4 mb-8 border-b border-gray-700">
                     <button
                         onClick={() => setActiveTab('trainers')}
