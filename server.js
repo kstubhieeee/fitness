@@ -16,8 +16,8 @@ const app = express();
 
 // Initialize Razorpay
 const razorpay = new Razorpay({
-    key_id: process.env.RAZORPAY_ID || 'rzp_test_ilZnoyJIDqrWYR',
-    key_secret: process.env.RAZORPAY_KEY_SECRET || 'mNh6LSxPXhLb7F6NZhGIw24L'
+    key_id: process.env.RAZORPAY_ID ,
+    key_secret: process.env.RAZORPAY_KEY_SECRET
 });
 
 // Middleware
